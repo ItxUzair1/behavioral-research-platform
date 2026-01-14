@@ -22,6 +22,7 @@ mongoose.connect(MONGO_URI)
 // Routes
 app.use('/api/participants', participantRoutes);
 app.use('/api/trials', trialRoutes);
+app.use('/api/tasks', require('./routes/taskRoutes'));
 
 // Health Check
 app.get('/', (req, res) => {

@@ -3,6 +3,8 @@ import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Puzzle, ArrowLeftRight, Move, Check, X } from 'lucide-react';
 import { api } from '../../../services/api';
+import { MatchingGame } from '../../game/MatchingGame';
+import { SortingGame } from '../../game/SortingGame';
 
 const TASK_CONFIG = {
     matching: {
@@ -46,7 +48,7 @@ const TASK_CONFIG = {
     }
 };
 
-export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onComplete, participantId }) => {
+export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase = 'Unknown', trialNumber, totalTrials, onComplete, participantId, onOptOut }) => {
     const [complete, setComplete] = useState(false);
     const config = TASK_CONFIG[type];
     const Icon = config.icon;
@@ -55,11 +57,11 @@ export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onCom
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSimulateTask = async () => {
+    const handleSimulateTask = async (isCorrect = true, rt = 0) => {
         if (isSubmitting) return;
 
         // Simulate performing the task
-        const rt = Math.floor(Math.random() * 500 + 800);
+        // const rt = Math.floor(Math.random() * 500 + 800); // Removed hardcoded random
         setIsSubmitting(true);
         setError(null);
 
@@ -71,18 +73,20 @@ export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onCom
             await api.logTrial({
                 participantId: participantId || "GUEST",
                 taskType: type,
-                taskVariant: 'Pre-Training',
+                taskVariant: variant,
+                phase: phase,
                 trialNumber,
                 responseTime: rt,
-                correct: true
+                correct: isCorrect
             });
             setBackendLog(`Saved to DB (RT: ${rt}ms)`);
-            setComplete(true);
+
+            // Immediate transition
+            onComplete();
+
         } catch (err) {
             console.error("Trial Log Error:", err);
             setError("Backend Error: " + err.message + ". (Check if backend server is running)");
-            // Optional: fallback to complete even if backend fails, for testing
-            // setComplete(true); 
         } finally {
             setIsSubmitting(false);
         }
@@ -103,11 +107,27 @@ export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onCom
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
                         <div>
-                            <h2 className={`text-xl font-bold ${config.theme.text} mb-1`}>{config.title}</h2>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h2 className={`text-xl font-bold ${config.theme.text}`}>{config.title}</h2>
+                                {variant === 'Pre-Training' && (
+                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full border border-yellow-200 font-medium">
+                                        Experience Only - No Money
+                                    </span>
+                                )}
+                            </div>
                             <p className={`${config.theme.text} opacity-80`}>{config.description}</p>
                         </div>
-                        <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${config.theme.text}`}>
-                            Trial {trialNumber} / {totalTrials}
+                        <div className="flex flex-col items-end gap-2">
+                            <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${config.theme.text}`}>
+                                Trial {trialNumber} / {totalTrials}
+                            </div>
+                            {/* Opt Out Button - Logic: onOptOut prop callback */}
+                            <button
+                                onClick={onOptOut || (() => alert("Opt-out clicked"))}
+                                className="text-xs text-red-600 hover:text-red-800 underline opacity-70 hover:opacity-100"
+                            >
+                                Opt out of task
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -115,35 +135,32 @@ export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onCom
 
             {/* Task Interaction Area */}
             <Card className={`min-h-[400px] flex items-center justify-center relative overflow-hidden border-t-4 ${config.theme.accent}`}>
-                {complete ? (
-                    <div className="text-center animate-in zoom-in duration-300">
-                        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 text-green-600">
-                            <Check className="w-10 h-10" />
+                <div className="w-full h-full p-4">
+                    {type === 'matching' && (
+                        <MatchingGame
+                            variant={variant}
+                            participantId={participantId}
+                            phase={phase}
+                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                        />
+                    )}
+                    {type === 'sorting' && (
+                        <SortingGame
+                            variant={variant}
+                            participantId={participantId}
+                            phase={phase}
+                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                        />
+                    )}
+                    {type === 'dragging' && (
+                        <div
+                            onClick={() => handleSimulateTask(true, 1000)}
+                            className="text-center p-10 text-gray-400 cursor-pointer hover:text-gray-600 border-2 border-dashed border-transparent hover:border-gray-200 rounded-xl transition-all"
+                        >
+                            [ Dragging Task Placeholder - Click to Simulate ]
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">Trial Logged</h3>
-                        <p className="text-gray-500 text-sm">{backendLog}</p>
-
-                        <div className="mt-8">
-                            <Button onClick={handleNext} className={config.theme.button}>
-                                Next Trial
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center space-y-6 w-full max-w-md mx-auto">
-                        <div className="p-12 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 group hover:border-gray-400 transition-colors cursor-pointer" onClick={handleSimulateTask}>
-                            <p className="text-gray-400 font-medium group-hover:text-gray-600">
-                                [ Interactive {config.title} Placeholder ]
-                            </p>
-                            <p className="text-xs text-gray-300 mt-2">
-                                Click here to simulate completing this trial
-                            </p>
-                        </div>
-                        <p className="text-sm text-gray-400 font-mono">
-                            Listening for user interaction...
-                        </p>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 <div className="absolute bottom-4 left-4 p-2 flex flex-col items-start gap-1">
                     <div className="bg-black/5 rounded px-2 py-1 text-[10px] text-gray-400 font-mono">
@@ -155,7 +172,7 @@ export const TaskTrialUI = ({ type = 'matching', trialNumber, totalTrials, onCom
                         </div>
                     )}
                 </div>
-            </Card>
-        </div>
+            </Card >
+        </div >
     );
 };

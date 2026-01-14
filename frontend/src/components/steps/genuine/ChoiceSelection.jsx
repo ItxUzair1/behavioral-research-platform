@@ -4,7 +4,8 @@ import { Button } from '../../ui/Button';
 import { MousePointerClick, Timer } from 'lucide-react';
 import { api } from '../../../services/api';
 
-export const ChoiceSelection = ({ onConfirm, participantId }) => {
+export const ChoiceSelection = ({ options = [], choiceStep, onConfirm, participantId }) => {
+    // options: [{ id: 'task-a', title: 'Task A', description: '...', image: '...' }]
     const [selectedTask, setSelectedTask] = useState(null);
     const [timer, setTimer] = useState(0);
 
@@ -20,10 +21,20 @@ export const ChoiceSelection = ({ onConfirm, participantId }) => {
         if (selectedTask) {
             setLoading(true);
             try {
-                await api.updateParticipant(participantId, {
-                    choiceTask: selectedTask,
-                    currentStep: 'Execution' // Marking progress
-                });
+                // Determine update object based on choiceStep
+                // choiceStep could be "matching_choice" or "sorting_choice"
+                const updateKey = `genuine_choices.${choiceStep}`;
+
+                const updatePayload = {
+                    [updateKey]: {
+                        selection: selectedTask,
+                        latency: timer,
+                        timestamp: new Date()
+                    }
+                    // We do NOT update currentStep here, as we might move to next pre-training phase
+                };
+
+                await api.updateParticipant(participantId, updatePayload);
                 onConfirm(selectedTask);
             } catch (error) {
                 console.error("Choice Save Error:", error);
@@ -33,7 +44,7 @@ export const ChoiceSelection = ({ onConfirm, participantId }) => {
         }
     };
 
-    const SelectionCard = ({ id, title, description, reward }) => {
+    const SelectionCard = ({ id, title, description }) => {
         const isSelected = selectedTask === id;
 
         return (
@@ -58,48 +69,48 @@ export const ChoiceSelection = ({ onConfirm, participantId }) => {
                     </div>
                 </div>
 
-                <div className="mb-6 h-24 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
-                    <span className="text-gray-400 text-xs font-mono uppercase">Preview Image</span>
+                <div className="mb-6 h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200 overflow-hidden">
+                    <div className="text-gray-400 text-xs font-mono uppercase text-center">
+                        [Screenshot of {title}]<br />
+                        (Experience from Pre-Training)
+                    </div>
                 </div>
 
                 <p className="text-gray-600 text-sm mb-6 flex-1">
                     {description}
                 </p>
-
-                <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50 -mx-6 -mb-6 px-6 py-4">
-                    <span className="text-sm font-medium text-gray-500">Fixed Reward</span>
-                    <span className="font-bold text-gray-900">{reward}</span>
-                </div>
             </div>
         );
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 max-w-5xl mx-auto">
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900">Choose Your Task</h1>
                 <p className="text-lg text-gray-500 max-w-xl mx-auto">
-                    You have now experienced all tasks. Please select which one you would
-                    like to perform for the remainder of this session to earn your payment.
+                    Based on your experience, please select which task you would like to perform
+                    to earn money in this section.
                 </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                <SelectionCard
-                    id="task-a"
-                    title="Task Bundle A"
-                    description="Contains mainly Matching and Sorting tasks. Requires moderate attention and speed."
-                    reward="$5.00"
-                />
-                <SelectionCard
-                    id="task-b"
-                    title="Task Bundle B"
-                    description="Contains mainly Sorting and Dragging tasks. Requires high precision and focus."
-                    reward="$5.00"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {options.map(opt => (
+                    <SelectionCard
+                        key={opt.id}
+                        id={opt.id}
+                        title={opt.title}
+                        description={opt.description}
+                    />
+                ))}
             </div>
 
-            <div className="flex items-center justify-center gap-8 pt-6">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                <p className="text-emerald-900 font-semibold text-lg">
+                    You can earn up to $1.60 in this section
+                </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-8 pt-2">
                 <div className="flex items-center gap-2 text-gray-400 text-sm font-mono">
                     <Timer className="w-4 h-4" />
                     <span>Decision Time: {timer}s</span>

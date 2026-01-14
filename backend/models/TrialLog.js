@@ -11,6 +11,10 @@ const trialLogSchema = new mongoose.Schema({
         enum: ["Matching", "Sorting", "Dragging", "matching", "sorting", "dragging"],
         required: true
     },
+    phase: {
+        type: String, // "Genuine", "Apparent", "Coercion", "Pre-Training"
+        required: true
+    },
     taskVariant: {
         type: String, // "Task A" or "Task B" or "Pre-Training"
         default: "Pre-Training"

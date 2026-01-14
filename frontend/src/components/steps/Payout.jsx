@@ -3,7 +3,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { CheckCircle, Download, ExternalLink } from 'lucide-react';
 
-export const Payout = () => {
+export const Payout = ({ onReset }) => {
     return (
         <div className="space-y-6 max-w-lg mx-auto text-center">
             <div className="mb-8">
@@ -57,6 +57,18 @@ export const Payout = () => {
                         Download Participation Receipt
                     </Button>
                 </div>
+
+                {onReset && (
+                    <div className="pt-4 border-t border-gray-100">
+                        <Button
+                            variant="ghost"
+                            onClick={onReset}
+                            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                        >
+                            Start New Experiment
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );

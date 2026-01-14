@@ -149,7 +149,7 @@ export const ConditionTask = ({ variant = 'genuine', onNext }) => {
                                 disabled={variant === 'coercion'}
                                 className="w-full py-3 px-4 rounded-xl font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {variant === 'coercion' ? 'Quit (Disabled)' : 'Quit Study'}
+                                {variant === 'coercion' ? 'Opt out of task (Disabled)' : 'Opt out of task'}
                             </button>
                         </div>
                     </Card>

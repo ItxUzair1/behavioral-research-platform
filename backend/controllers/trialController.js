@@ -6,6 +6,7 @@ exports.logTrial = async (req, res) => {
             participantId,
             taskType,
             taskVariant,
+            phase,
             trialNumber,
             responseTime,
             correct
@@ -21,6 +22,7 @@ exports.logTrial = async (req, res) => {
             participantId,
             taskType,
             taskVariant,
+            phase,
             trialNumber,
             responseTime,
             correct

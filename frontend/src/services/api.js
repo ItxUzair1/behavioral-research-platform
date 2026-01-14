@@ -37,5 +37,21 @@ export const api = {
             throw new Error(errData.message || `Server error: ${response.status}`);
         }
         return response.json();
+    },
+
+    getStimulus: async (type, variant) => {
+        const response = await fetch(`${API_BASE_URL}/tasks/stimulus?type=${type}&variant=${variant}`);
+        if (!response.ok) throw new Error("Failed to fetch stimulus");
+        return response.json();
+    },
+
+    submitTaskResult: async (data) => {
+        const response = await fetch(`${API_BASE_URL}/tasks/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error("Failed to submit result");
+        return response.json();
     }
 };
