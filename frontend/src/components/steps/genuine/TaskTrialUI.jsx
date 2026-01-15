@@ -118,15 +118,23 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             <p className={`${config.theme.text} opacity-80`}>{config.description}</p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                            <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${config.theme.text}`}>
-                                Trial {trialNumber} / {totalTrials}
-                            </div>
+                            {(phase === 'Genuine' || variant === 'Pre-Training') && (
+                                <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${config.theme.text}`}>
+                                    Trial {trialNumber} / {totalTrials}
+                                </div>
+                            )}
+                            {/* Opt Out Button - Logic: onOptOut prop callback */}
                             {/* Opt Out Button - Logic: onOptOut prop callback */}
                             <button
                                 onClick={onOptOut || (() => alert("Opt-out clicked"))}
-                                className="text-xs text-red-600 hover:text-red-800 underline opacity-70 hover:opacity-100"
+                                disabled={!onOptOut}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all duration-200 border-2 
+                                    ${onOptOut
+                                        ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 hover:shadow-md cursor-pointer'
+                                        : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                                    }`}
                             >
-                                Opt out of task
+                                Opt Out of Task
                             </button>
                         </div>
                     </div>

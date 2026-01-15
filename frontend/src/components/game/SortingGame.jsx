@@ -101,11 +101,18 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     return (
         <div className="flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto bg-gray-200 p-4 border-2 border-gray-400 relative">
 
-            {/* Top Bar for Main Task (With Earnings) - Pre-training bar removed */}
+            {/* Top Bar for Main Task (With Earnings) */}
             {!isGenuine && (
                 <div className="w-full flex justify-between px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md">
                     <div>Trials: {trialCount} / {MAX_TRIALS}</div>
                     <div className="text-green-400 font-bold">Earnings: ${earnings.toFixed(2)}</div>
+                </div>
+            )}
+
+            {/* Top Bar for Pre-Training (Trails Only) */}
+            {isGenuine && (
+                <div className="w-full flex justify-center px-8 py-2 bg-gray-700 text-white font-mono text-lg shadow-md">
+                    <div>Trials: {trialCount} / {MAX_TRIALS}</div>
                 </div>
             )}
 

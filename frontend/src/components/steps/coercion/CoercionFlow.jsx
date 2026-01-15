@@ -8,12 +8,23 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
     // 1: Sorting (Opposite of Genuine)
     // 2: Dragging (Progressive Ratio)
     const [step, setStep] = useState(0);
+    const [trial, setTrial] = useState(1);
+    const TOTAL_TRIALS = 200;
 
     const handleStepComplete = () => {
         if (step < 2) {
             setStep(s => s + 1);
+            setTrial(1); // Reset
         } else {
             onNext();
+        }
+    };
+
+    const handleNextTrial = () => {
+        if (trial < TOTAL_TRIALS) {
+            setTrial(t => t + 1);
+        } else {
+            handleStepComplete();
         }
     };
 
@@ -89,13 +100,11 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
                 type={taskConfig.type}
                 variant={taskConfig.variant}
                 phase="Coercion"
-                trialNumber={1}
-                totalTrials={10}
-                onComplete={handleStepComplete}
+                trialNumber={trial}
+                totalTrials={TOTAL_TRIALS}
+                onComplete={handleNextTrial}
                 participantId={participantId}
-                onOptOut={null} // Disable opt out button in TaskTrialUI if it checks for prop existence?
-            // Checking TaskTrialUI: `onClick={onOptOut || (() => alert("Opt-out clicked"))}`
-            // If I pass null, it alerts "Opt-out clicked". I should pass a no-op or specific handler.
+                onOptOut={null} // Disable opt out button
             />
         </div>
     );

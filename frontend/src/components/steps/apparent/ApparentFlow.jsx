@@ -8,12 +8,23 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
     // 1: Sorting (Opposite of Genuine)
     // 2: Dragging (Progressive Ratio)
     const [step, setStep] = useState(0);
+    const [trial, setTrial] = useState(1);
+    const TOTAL_TRIALS = 200;
 
     const handleStepComplete = () => {
         if (step < 2) {
             setStep(s => s + 1);
+            setTrial(1); // Reset trial count for next task
         } else {
             onNext();
+        }
+    };
+
+    const handleNextTrial = () => {
+        if (trial < TOTAL_TRIALS) {
+            setTrial(t => t + 1);
+        } else {
+            handleStepComplete();
         }
     };
 
@@ -82,9 +93,9 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
                 type={taskConfig.type}
                 variant={taskConfig.variant}
                 phase="Apparent"
-                trialNumber={1} // Simplified for skeleton
-                totalTrials={10} // Placeholder
-                onComplete={handleStepComplete}
+                trialNumber={trial}
+                totalTrials={TOTAL_TRIALS}
+                onComplete={handleNextTrial}
                 participantId={participantId}
                 onOptOut={handleOptOut}
             />
