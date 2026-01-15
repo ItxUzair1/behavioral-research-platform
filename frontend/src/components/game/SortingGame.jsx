@@ -98,8 +98,18 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
 
     if (loading) return <div className="p-10 text-center font-mono text-gray-500">Loading Task...</div>;
 
+    // Determine background color based on phase
+    let bgClass = 'bg-gray-200'; // Default
+    if (phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training')) {
+        bgClass = 'bg-green-200 border-green-400';
+    } else if (phase?.toLowerCase().includes('apparent')) {
+        bgClass = 'bg-purple-200 border-purple-400';
+    } else if (phase?.toLowerCase().includes('coercion')) {
+        bgClass = 'bg-orange-200 border-orange-400';
+    }
+
     return (
-        <div className="flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto bg-gray-200 p-4 border-2 border-gray-400 relative">
+        <div className={`flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
             {/* Top Bar for Main Task (With Earnings) */}
             {!isGenuine && (

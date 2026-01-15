@@ -45,11 +45,56 @@ const participantSchema = new mongoose.Schema({
         of: Number // trial count per task
     },
     reinforcementState: {
+        // --- Generic Sub-Schema for Reinforcement ---
+        // We can't use a shared object definition easily in Mongoose without subdocuments or copy-paste.
+        // Expanding explicitly for clarity and queryability.
+
+        // Apparent Phase
+        matching_apparent: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        sorting_apparent: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        dragging_apparent: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+
+        // Coercion Phase
+        matching_coercion: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        sorting_coercion: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        dragging_coercion: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+
+        // Legacy / Fallback (optional, keeping for safety if older code queries it, though we will update service)
         matching: {
-            schedule: { type: [Number], default: [] }, // The pre-generated VR schedule
-            scheduleIndex: { type: Number, default: 0 }, // Pointer to current threshold in schedule
-            correctCount: { type: Number, default: 0 }, // Correct responses towards current threshold
-            trialsCompleted: { type: Number, default: 0 } // Total trials in this condition
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
         },
         sorting: {
             schedule: { type: [Number], default: [] },

@@ -47,6 +47,19 @@ export const PreTraining = ({ tasks = [], onComplete, participantId, onOptOut })
                 onComplete={handleNextTrial}
                 participantId={participantId}
                 onOptOut={onOptOut}
+                onSwitch={() => {
+                    if (currentTaskIndex < tasks.length - 1) {
+                        setCurrentTaskIndex(prev => prev + 1);
+                        setTrial(1);
+                    } else {
+                        // No more tasks to switch to, maybe complete? OR just ignore.
+                        // User flow: "take them to the other task".
+                        // If we are at the last task, maybe treat as OptOut or disabled.
+                        // For now, if last task, we do nothing or could loop back?
+                        // Let's safe guard:
+                        alert("No other tasks to switch to.");
+                    }
+                }}
             />
         </div>
     );

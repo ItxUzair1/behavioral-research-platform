@@ -57,11 +57,24 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     const participant = await Participant.findOne({ participantId });
     if (!participant) throw new Error('Participant not found');
 
-    const taskKey = taskType.toLowerCase();
+    // Determine strict task key based on logic:
+    // If Pre-Training: "matching" (generic)
+    // If Main Task (Apparent/Coercion): "matching_apparent" or "matching_coercion"
 
-    // Check if Pre-Training (Genuine Assent) or Main Task
+    // Check if Pre-Training
     const isPreTraining = (condition && condition.toLowerCase().includes('genuine')) ||
         (condition && condition.toLowerCase().includes('pre-training'));
+
+    let taskKey = taskType.toLowerCase();
+
+    if (!isPreTraining && condition) {
+        // Apparent or Coercion
+        const suffix = condition.toLowerCase();
+        // user might send "Apparent Assent" -> just use "apparent" if contained
+        if (suffix.includes('apparent')) taskKey += '_apparent';
+        else if (suffix.includes('coercion')) taskKey += '_coercion';
+        // else fallback to generic taskKey
+    }
 
     let rewardEarned = false;
     let rewardAmount = 0;
@@ -161,8 +174,14 @@ const startTask = async (participantId, taskType, condition, variant) => {
     const participant = await Participant.findOne({ participantId });
     if (!participant) throw new Error('Participant not found');
 
-    const taskKey = taskType.toLowerCase();
-    const isPreTraining = (condition && condition.toLowerCase().includes('genuine'));
+    let taskKey = taskType.toLowerCase();
+    const isPreTraining = (condition && condition.toLowerCase().includes('genuine')) || (condition && condition.toLowerCase().includes('pre-training'));
+
+    if (!isPreTraining && condition) {
+        const suffix = condition.toLowerCase();
+        if (suffix.includes('apparent')) taskKey += '_apparent';
+        else if (suffix.includes('coercion')) taskKey += '_coercion';
+    }
 
     let trialsCompleted = 0;
 

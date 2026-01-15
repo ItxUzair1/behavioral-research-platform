@@ -5,6 +5,7 @@ import { Puzzle, ArrowLeftRight, Move, Check, X } from 'lucide-react';
 import { api } from '../../../services/api';
 import { MatchingGame } from '../../game/MatchingGame';
 import { SortingGame } from '../../game/SortingGame';
+import { OptOutModal } from '../../common/OptOutModal';
 
 const TASK_CONFIG = {
     matching: {
@@ -48,7 +49,7 @@ const TASK_CONFIG = {
     }
 };
 
-export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase = 'Unknown', trialNumber, totalTrials, onComplete, participantId, onOptOut }) => {
+export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase = 'Unknown', trialNumber, totalTrials, onComplete, participantId, onOptOut, onSwitch }) => {
     const [complete, setComplete] = useState(false);
     const config = TASK_CONFIG[type];
     const Icon = config.icon;
@@ -97,8 +98,33 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
         onComplete();
     };
 
+    const [showOptOutModal, setShowOptOutModal] = useState(false);
+
+    const handleOptOutClick = () => {
+        setShowOptOutModal(true);
+    };
+
+    const handleConfirmOptOut = () => {
+        setShowOptOutModal(false);
+        if (onOptOut) onOptOut();
+    };
+
+    const handleSwitch = () => {
+        setShowOptOutModal(false);
+        if (onSwitch) onSwitch();
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            <OptOutModal
+                isOpen={showOptOutModal}
+                onCancel={() => setShowOptOutModal(false)}
+                onConfirm={handleConfirmOptOut}
+                onSwitch={handleSwitch}
+                phase={phase}
+                taskName={config.title}
+            />
+
             {/* Header */}
             <div className={`p-6 rounded-2xl border ${config.theme.bg} ${config.theme.border} flex items-start gap-4 transition-all duration-300`}>
                 <div className={`p-3 rounded-xl bg-white shadow-sm ${config.theme.icon}`}>
@@ -124,9 +150,8 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                                 </div>
                             )}
                             {/* Opt Out Button - Logic: onOptOut prop callback */}
-                            {/* Opt Out Button - Logic: onOptOut prop callback */}
                             <button
-                                onClick={onOptOut || (() => alert("Opt-out clicked"))}
+                                onClick={handleOptOutClick}
                                 disabled={!onOptOut}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all duration-200 border-2 
                                     ${onOptOut

@@ -39,7 +39,9 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
     // I'll make the button disabled by passing `onOptOut={null}` or a no-op that alerts.
 
     const handleOptOut = () => {
-        alert("Opt-out is not available for this task.");
+        // User confirmed opt-out via modal (which warns about money loss)
+        // Proceed to next step/task
+        handleStepComplete();
     };
 
     // Determine tasks based on choices
@@ -104,7 +106,7 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
                 totalTrials={TOTAL_TRIALS}
                 onComplete={handleNextTrial}
                 participantId={participantId}
-                onOptOut={null} // Disable opt out button
+                onOptOut={handleOptOut}
             />
         </div>
     );

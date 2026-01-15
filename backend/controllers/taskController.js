@@ -17,13 +17,22 @@ const MAMMALS = [
     { name: "Elephant", id: "elephant" },
     { name: "Whale", id: "whale" }
 ];
-const NON_MAMMALS = [
+const BIRDS = [
+    { name: "Eagle", id: "eagle" },
+    { name: "Parrot", id: "parrot" },
+    { name: "Penguin", id: "penguin" },
+    { name: "Owl", id: "owl" },
+    { name: "Duck", id: "duck" }
+];
+const REPTILES = [
     { name: "Snake", id: "snake" },
     { name: "Lizard", id: "lizard" },
-    { name: "Eagle", id: "eagle" },
-    { name: "Shark", id: "shark" },
-    { name: "Frog", id: "frog" }
+    { name: "Crocodile", id: "crocodile" },
+    { name: "Turtle", id: "turtle" },
+    { name: "Chameleon", id: "chameleon" }
 ];
+
+const NON_MAMMALS = [...BIRDS, ...REPTILES];
 
 const LETTERS = [
     { q: "A", a: "Vowel" }, { q: "E", a: "Vowel" }, { q: "I", a: "Vowel" },
@@ -34,6 +43,8 @@ const SYLLABLES = [
     { q: "Paper", a: "2" }, { q: "Water", a: "2" },
     { q: "Elephant", a: "3" }, { q: "Banana", a: "3" }
 ];
+
+
 
 exports.getStimulus = async (req, res) => {
     try {
@@ -92,7 +103,7 @@ exports.getStimulus = async (req, res) => {
 
             } else if (variant === 'mammals') {
                 const correct = MAMMALS[randomInt(0, MAMMALS.length - 1)];
-                // Pick 2 distinct distractors
+                // Pick 2 distinct distractors from NON_MAMMALS (Birds + Reptiles)
                 const d1 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
                 let d2 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
                 while (d2.name === d1.name) {
@@ -102,7 +113,7 @@ exports.getStimulus = async (req, res) => {
                 const opts = [correct, d1, d2].sort(() => Math.random() - 0.5);
 
                 data = {
-                    stimulus: correct.name, // Display Name on Right
+                    stimulus: "Mammal",     // Display fixed text on Right
                     options: opts,          // Draggables on Left (Objects: {name, img})
                     correctOption: correct.name // Validation uses Name
                 };
