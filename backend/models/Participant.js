@@ -46,16 +46,22 @@ const participantSchema = new mongoose.Schema({
     },
     reinforcementState: {
         matching: {
-            counter: { type: Number, default: 0 },
-            threshold: { type: Number, default: 4 } // Initial seed
+            schedule: { type: [Number], default: [] }, // The pre-generated VR schedule
+            scheduleIndex: { type: Number, default: 0 }, // Pointer to current threshold in schedule
+            correctCount: { type: Number, default: 0 }, // Correct responses towards current threshold
+            trialsCompleted: { type: Number, default: 0 } // Total trials in this condition
         },
         sorting: {
-            counter: { type: Number, default: 0 },
-            threshold: { type: Number, default: 4 }
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
         },
         dragging: {
-            counter: { type: Number, default: 0 },
-            threshold: { type: Number, default: 4 }
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
         }
     },
     earnings: {

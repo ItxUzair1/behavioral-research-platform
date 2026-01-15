@@ -1,5 +1,6 @@
 const Participant = require('../models/Participant');
 const TrialLog = require('../models/TrialLog');
+const RewardService = require('../services/rewardService');
 
 // Initial setup for randomization
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -169,61 +170,56 @@ exports.getStimulus = async (req, res) => {
 
 exports.submitResult = async (req, res) => {
     try {
-        const { participantId, taskType, phase, correct } = req.body;
-        // taskType should be 'matching', 'sorting', 'dragging'
-        // phase is 'Pre-Training', 'Genuine', etc.
+        const { participantId, taskType, condition, correct, variant } = req.body;
+        // condition should be 'Genuine', 'Apparent', 'Coercion' (mapped from Phase usually)
 
         if (!participantId || !taskType) {
             return res.status(400).json({ success: false, message: "Missing fields" });
         }
 
-        const participant = await Participant.findOne({ participantId });
-        if (!participant) {
-            return res.status(404).json({ success: false, message: "Participant not found" });
-        }
-
-        let reward = false;
-        let amount = 0;
-
-        // Log Logic
-        // (Ideally we call LogTrial here individually or rely on frontend to call the other endpoint.
-        // For atomic integrity, handling logic here is better if we want to secure earnings.)
-
-        const isPreTraining = phase && phase.toLowerCase().includes('pre-training');
-
-        if (correct && !isPreTraining) {
-            // Apply VR4 Schedule
-            // normalize type key
-            const typeKey = taskType.toLowerCase();
-            const state = participant.reinforcementState[typeKey];
-
-            if (state) {
-                state.counter += 1;
-
-                if (state.counter >= state.threshold) {
-                    // Start Reward
-                    reward = true;
-                    amount = 0.05; // 5 cents
-                    participant.earnings += amount;
-
-                    // Reset VR logic
-                    state.counter = 0;
-                    state.threshold = randomInt(1, 8); // Range 1-8, avg 4.5
-                }
-            }
-        }
-
-        await participant.save();
+        const result = await RewardService.processTrial(participantId, taskType, correct, condition, variant);
 
         res.json({
             success: true,
-            reward,
-            amount,
-            totalEarnings: participant.earnings,
-            nextThreshold: isPreTraining ? 0 : participant.reinforcementState[taskType.toLowerCase()].threshold
+            reward: result.rewardEarned,
+            amount: result.rewardAmount,
+            totalEarnings: result.totalEarnings,
+            trialsCompleted: result.trialsCompleted
         });
 
     } catch (error) {
+        console.error("Submit Result Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+exports.startTask = async (req, res) => {
+    try {
+        const { participantId, taskType, condition, variant } = req.body;
+        if (!participantId || !taskType) {
+            return res.status(400).json({ success: false, message: "Missing fields" });
+        }
+
+        // Pass 'condition' and 'variant'
+        const data = await RewardService.startTask(participantId, taskType, condition, variant);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error("Start Task Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+exports.getEarnings = async (req, res) => {
+    try {
+        const { participantId } = req.query;
+        if (!participantId) {
+            return res.status(400).json({ success: false, message: "Missing participantId" });
+        }
+
+        const data = await RewardService.getEarnings(participantId);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error("Get Earnings Error:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
