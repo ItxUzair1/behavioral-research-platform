@@ -8,45 +8,18 @@ export const OptOutModal = ({ isOpen, onCancel, onConfirm, onSwitch, phase, task
     const isApparent = phase?.toLowerCase().includes('apparent');
 
     // Determine theme based on phase
-    let theme;
-    if (isCoercion) {
-        theme = {
-            overlay: 'bg-orange-900/40',
-            bg: 'bg-white',
-            border: 'border-orange-500',
-            title: 'text-orange-700',
-            text: 'text-gray-800',
-            icon: 'text-orange-600',
-            primaryBtn: 'bg-orange-600 hover:bg-orange-700 text-white',
-            secondaryBtn: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
-            tertiaryBtn: 'bg-orange-100 hover:bg-orange-200 text-orange-800'
-        };
-    } else if (isApparent) {
-        theme = {
-            overlay: 'bg-purple-900/40',
-            bg: 'bg-white',
-            border: 'border-purple-500',
-            title: 'text-purple-700',
-            text: 'text-gray-800',
-            icon: 'text-purple-600',
-            primaryBtn: 'bg-purple-600 hover:bg-purple-700 text-white',
-            secondaryBtn: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
-            tertiaryBtn: 'bg-purple-100 hover:bg-purple-200 text-purple-800'
-        };
-    } else {
-        // Genuine Assent (Green)
-        theme = {
-            overlay: 'bg-green-900/40',
-            bg: 'bg-white',
-            border: 'border-green-500',
-            title: 'text-green-700',
-            text: 'text-gray-800',
-            icon: 'text-green-600',
-            primaryBtn: 'bg-green-600 hover:bg-green-700 text-white',
-            secondaryBtn: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
-            tertiaryBtn: 'bg-green-100 hover:bg-green-200 text-green-800'
-        };
-    }
+    // Unified Grey Theme for all conditions
+    const theme = {
+        overlay: 'bg-gray-900/40',
+        bg: 'bg-white',
+        border: 'border-gray-400',
+        title: 'text-gray-800',
+        text: 'text-gray-800',
+        icon: 'text-gray-600',
+        primaryBtn: 'bg-gray-700 hover:bg-gray-800 text-white',
+        secondaryBtn: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
+        tertiaryBtn: 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+    };
 
     // Checking if we show the Switch option (Only for Genuine)
     const showSwitch = !isCoercion && !isApparent;
@@ -64,7 +37,7 @@ export const OptOutModal = ({ isOpen, onCancel, onConfirm, onSwitch, phase, task
 
                     {/* Title */}
                     <h2 className={`text-2xl font-bold ${theme.title}`}>
-                        {isCoercion ? 'Warning: Loss of Earnings' : 'End Task Confirmation'}
+                        End Task Confirmation
                     </h2>
 
                     {/* Message Body */}

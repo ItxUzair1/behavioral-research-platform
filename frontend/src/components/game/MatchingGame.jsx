@@ -2,16 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { RewardModal } from '../common/RewardModal';
 
-export const MatchingGame = ({ variant, participantId, phase, onComplete, onTrialEnd }) => {
+export const MatchingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [stimulus, setStimulus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [earnings, setEarnings] = useState(0);
-    const [trialCount, setTrialCount] = useState(0);
+    const [internalTrialCount, setInternalTrialCount] = useState(0);
     const [rewardData, setRewardData] = useState(null); // { amount: number }
 
     const isGenuine = phase?.toLowerCase().includes('genuine');
-    const MAX_TRIALS = isGenuine ? 15 : 200;
-    const showEarnings = !isGenuine;
+    const isPreTraining = phase?.toLowerCase().includes('pre-training');
+
+    // Use props if available (Execution/Apparent), else fallback to internal logic (Pre-Training initial load)
+    const displayTrial = currentTrial || internalTrialCount;
+    // Max trials: 15 for pre-training, 200 otherwise
+    const displayMax = totalTrials || (isPreTraining ? 15 : 200);
+
+    // Show earnings if NOT Pre-Training
+    const showEarnings = !isPreTraining;
 
     const initTask = async () => {
         setLoading(true);
@@ -21,11 +28,10 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             if (res.success) setStimulus(res.data);
 
             // 2. Initialize and get counts
-            // Always call startTask to get correct trial count (Pre or Main)
             const startRes = await api.startTask(participantId, 'matching', phase, variant);
             if (startRes.success) {
                 setEarnings(startRes.data.totalEarnings);
-                setTrialCount(startRes.data.trialsCompleted);
+                setInternalTrialCount(startRes.data.trialsCompleted);
             }
 
         } catch (err) {
@@ -57,13 +63,13 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
             if (res.success) {
                 // Update specific states
-                setTrialCount(res.trialsCompleted);
-                if (!isGenuine) {
+                setInternalTrialCount(res.trialsCompleted);
+                if (showEarnings) {
                     setEarnings(res.totalEarnings);
                     if (res.reward) setRewardData({ amount: res.amount });
                     else setTimeout(fetchNextStimulus, 500);
                 } else {
-                    // Genuine: just next trial
+                    // Pre-Training: just next trial
                     setTimeout(fetchNextStimulus, 500);
                 }
             }
@@ -102,20 +108,13 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
     return (
         <div className={`flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
-            {/* Top Bar for Main Task (With Earnings) */}
-            {!isGenuine && (
-                <div className="w-full flex justify-between px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md">
-                    <div>Trials: {trialCount} / {MAX_TRIALS}</div>
+            {/* Top Bar with Trial Count */}
+            <div className={`w-full flex justify-${showEarnings ? 'between' : 'center'} px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md`}>
+                <div>Trials: {displayTrial} / {displayMax}</div>
+                {showEarnings && (
                     <div className="text-green-400 font-bold">Earnings: ${earnings.toFixed(2)}</div>
-                </div>
-            )}
-
-            {/* Top Bar for Pre-Training (Trails Only) */}
-            {isGenuine && (
-                <div className="w-full flex justify-center px-8 py-2 bg-gray-700 text-white font-mono text-lg shadow-md">
-                    <div>Trials: {trialCount} / {MAX_TRIALS}</div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* INSTRUCTIONS BOX */}
             <div className="bg-white border-2 border-black p-4 text-center max-w-xl shadow-sm z-10 mt-2">

@@ -6,6 +6,7 @@ import { api } from '../../../services/api';
 import { MatchingGame } from '../../game/MatchingGame';
 import { SortingGame } from '../../game/SortingGame';
 import { OptOutModal } from '../../common/OptOutModal';
+import { DraggingGame } from '../../game/DraggingGame';
 
 const TASK_CONFIG = {
     matching: {
@@ -57,6 +58,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [backendLog, setBackendLog] = useState(null);
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [earnings, setEarnings] = useState(0.00);
 
     const handleSimulateTask = async (isCorrect = true, rt = 0) => {
         if (isSubmitting) return;
@@ -71,7 +73,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 console.warn("No participantId found, using 'GUEST' for testing");
             }
 
-            await api.logTrial({
+            const response = await api.logTrial({
                 participantId: participantId || "GUEST",
                 taskType: type,
                 taskVariant: variant,
@@ -81,6 +83,10 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 correct: isCorrect
             });
             setBackendLog(`Saved to DB (RT: ${rt}ms)`);
+
+            if (response.earnings !== undefined) {
+                setEarnings(response.earnings);
+            }
 
             // Immediate transition
             onComplete();
@@ -150,17 +156,15 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                                 </div>
                             )}
                             {/* Opt Out Button - Logic: onOptOut prop callback */}
-                            <button
-                                onClick={handleOptOutClick}
-                                disabled={!onOptOut}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all duration-200 border-2 
-                                    ${onOptOut
-                                        ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 hover:shadow-md cursor-pointer'
-                                        : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
-                                    }`}
-                            >
-                                Opt Out of Task
-                            </button>
+                            {/* Opt Out Button - Only render if onOptOut is provided */}
+                            {onOptOut && (
+                                <button
+                                    onClick={handleOptOutClick}
+                                    className="px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all duration-200 border-2 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 hover:shadow-md cursor-pointer"
+                                >
+                                    Opt Out of Task
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -175,6 +179,8 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             participantId={participantId}
                             phase={phase}
                             onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            currentTrial={trialNumber}
+                            totalTrials={totalTrials}
                         />
                     )}
                     {type === 'sorting' && (
@@ -183,15 +189,19 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             participantId={participantId}
                             phase={phase}
                             onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            currentTrial={trialNumber}
+                            totalTrials={totalTrials}
                         />
                     )}
                     {type === 'dragging' && (
-                        <div
-                            onClick={() => handleSimulateTask(true, 1000)}
-                            className="text-center p-10 text-gray-400 cursor-pointer hover:text-gray-600 border-2 border-dashed border-transparent hover:border-gray-200 rounded-xl transition-all"
-                        >
-                            [ Dragging Task Placeholder - Click to Simulate ]
-                        </div>
+                        <DraggingGame
+                            variant={variant}
+                            participantId={participantId}
+                            phase={phase}
+                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            currentTrial={trialNumber}
+                            totalTrials={totalTrials}
+                        />
                     )}
                 </div>
 
