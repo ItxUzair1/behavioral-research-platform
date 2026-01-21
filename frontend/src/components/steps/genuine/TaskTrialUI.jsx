@@ -50,6 +50,25 @@ const TASK_CONFIG = {
     }
 };
 
+
+const PURPLE_THEME = {
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    text: 'text-purple-900',
+    icon: 'text-purple-600',
+    button: 'bg-purple-600 hover:bg-purple-700',
+    accent: 'border-purple-400'
+};
+
+const ORANGE_THEME = {
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-900',
+    icon: 'text-orange-600',
+    button: 'bg-orange-600 hover:bg-orange-700',
+    accent: 'border-orange-400'
+};
+
 export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase = 'Unknown', trialNumber, totalTrials, onComplete, participantId, onOptOut, onSwitch }) => {
     const [complete, setComplete] = useState(false);
     const config = TASK_CONFIG[type];
@@ -59,6 +78,22 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [earnings, setEarnings] = useState(0.00);
+
+    // Determine current theme with override logic for Dragging in Genuine/Pre-Training
+    let currentTheme = config.theme;
+    const isGenuineOrPre = phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training') || variant === 'Pre-Training';
+
+    const isApparent = phase?.toLowerCase().includes('apparent');
+    const isCoercion = phase?.toLowerCase().includes('coercion');
+
+    if (type === 'dragging' && isGenuineOrPre) {
+        // Reuse Sorting's Green Theme
+        currentTheme = TASK_CONFIG.sorting.theme;
+    } else if (isApparent) {
+        currentTheme = PURPLE_THEME;
+    } else if (isCoercion) {
+        currentTheme = ORANGE_THEME;
+    }
 
     const [optOutStartTime, setOptOutStartTime] = useState(null);
 
@@ -152,15 +187,15 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
             />
 
             {/* Header */}
-            <div className={`p-6 rounded-2xl border ${config.theme.bg} ${config.theme.border} flex items-start gap-4 transition-all duration-300`}>
-                <div className={`p-3 rounded-xl bg-white shadow-sm ${config.theme.icon}`}>
+            <div className={`p-6 rounded-2xl border ${currentTheme.bg} ${currentTheme.border} flex items-start gap-4 transition-all duration-300`}>
+                <div className={`p-3 rounded-xl bg-white shadow-sm ${currentTheme.icon}`}>
                     <Icon className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h2 className={`text-xl font-bold ${config.theme.text}`}>
+                                <h2 className={`text-xl font-bold ${currentTheme.text}`}>
                                     {type === 'dragging'
                                         ? (variant === 'pr' ? "Dragging the Circle" : "Dragging the Square")
                                         : config.title}
@@ -171,11 +206,11 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                                     </span>
                                 )}
                             </div>
-                            <p className={`${config.theme.text} opacity-80`}>{config.description}</p>
+                            <p className={`${currentTheme.text} opacity-80`}>{config.description}</p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                             {(phase === 'Genuine' || variant === 'Pre-Training') && (
-                                <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${config.theme.text}`}>
+                                <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${currentTheme.text}`}>
                                     Trial {trialNumber} / {totalTrials}
                                 </div>
                             )}
@@ -195,7 +230,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
             </div>
 
             {/* Task Interaction Area */}
-            <Card className={`min-h-[400px] flex items-center justify-center relative overflow-hidden border-t-4 ${config.theme.accent}`}>
+            <Card className={`min-h-[400px] flex items-center justify-center relative overflow-hidden border-t-4 ${currentTheme.accent}`}>
                 <div className="w-full h-full p-4">
                     {type === 'matching' && (
                         <MatchingGame

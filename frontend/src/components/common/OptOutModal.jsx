@@ -45,11 +45,11 @@ export const OptOutModal = ({ isOpen, onCancel, onConfirm, onSwitch, phase, task
                         <p className={theme.text}>
                             {isCoercion ? (
                                 <>
-                                    If you opt out, you will <span className="font-bold underline text-red-600">lose all the money</span> earned so far in this task.
+                                    If you opt out, you will <span className="font-bold underline text-black-600">lose all the money</span> earned so far in this task.
                                 </>
                             ) : (
                                 <>
-                                    If you opt out you can <span className="font-bold text-green-600">keep all the money</span> you have earned so far.
+                                    If you opt out you can <span className="font-bold text-black-600">keep all the money</span> you have earned so far.
                                 </>
                             )}
                         </p>

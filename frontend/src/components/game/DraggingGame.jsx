@@ -163,6 +163,9 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
 
     // Determine background color based on phase
     let bgClass = 'bg-gray-200';
+    let dragShapeBg = 'bg-red-600 hover:bg-red-500';
+    let dragInnerBg = 'bg-red-800';
+
     if (phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training')) {
         bgClass = 'bg-green-200 border-green-400';
     } else if (phase?.toLowerCase().includes('apparent')) {
@@ -207,7 +210,7 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                     className="w-full max-w-2xl h-32 bg-gray-300 border-4 border-gray-500 relative flex items-center shadow-inner"
                 >
                     {/* Target Area (Right) */}
-                    <div className="absolute right-0 top-0 bottom-0 w-32 bg-black h-full flex items-center justify-center">
+                    <div className={`absolute right-0 top-0 bottom-0 w-32 bg-black h-full flex items-center justify-center ${shapeClass}`}>
                         {/* Visual indicator */}
                     </div>
 
@@ -219,10 +222,10 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                             left: `${position}%`,
                             transition: isDragging ? 'none' : 'left 0.3s ease-out'
                         }}
-                        className={`absolute top-0 bottom-0 w-24 h-full bg-red-600 border-2 border-black cursor-grab active:cursor-grabbing shadow-xl z-20 flex items-center justify-center ${shapeClass} hover:bg-red-500`}
+                        className={`absolute top-0 bottom-0 w-24 h-full ${dragShapeBg} border-2 border-black cursor-grab active:cursor-grabbing shadow-xl z-20 flex items-center justify-center ${shapeClass}`}
                     >
                         {/* Optional Inner Detail */}
-                        <div className={`w-4 h-4 bg-red-800 opacity-50 ${shapeClass}`}></div>
+                        <div className={`w-4 h-4 ${dragInnerBg} opacity-50 ${shapeClass}`}></div>
                     </div>
 
                 </div>
