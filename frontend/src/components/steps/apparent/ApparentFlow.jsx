@@ -69,7 +69,7 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
             return {
                 type: 'dragging',
                 variant: 'pr', // Progressive Ratio
-                label: 'Dragging Task (Progressive Ratio)'
+                label: 'Dragging the Circle'
             };
         }
     };

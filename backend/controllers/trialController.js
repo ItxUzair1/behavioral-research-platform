@@ -9,7 +9,10 @@ exports.logTrial = async (req, res) => {
             phase,
             trialNumber,
             responseTime,
-            correct
+            correct,
+            selectedOption, // New
+            eventType, // New (optional, default "Trial")
+            context
         } = req.body;
 
         console.log("Incoming Trial Log:", req.body); // DEBUG
@@ -25,40 +28,86 @@ exports.logTrial = async (req, res) => {
             phase,
             trialNumber,
             responseTime,
-            correct
+            correct,
+            selectedOption,
+            eventType: eventType || "Trial"
         });
+
+        // --- Fetch Schedule Requirement if it's a VR/PR task ---
+        // --- Process Reward Logic (CRITICAL: Must happen before saving log) ---
+        const rewardService = require('../services/rewardService');
+        let rewardResult = { rewardEarned: false, rewardAmount: 0, currentThreshold: 0 };
+
+        try {
+            // Only process rewards if it's a valid trial (not OptOut) and not Pre-Training
+            // Actually, processTrial handles pre-training logic internally (no money), so we can just call it.
+            // But we shouldn't call strict reward logic for "OptOut" event.
+            if (eventType !== 'OptOut') {
+                rewardResult = await rewardService.processTrial(
+                    participantId,
+                    taskType,
+                    correct === true, // Ensure boolean
+                    phase,
+                    taskVariant
+                );
+            }
+        } catch (err) {
+            console.error("Reward processing error:", err);
+        }
+
+        // Apply reward result to the log entry
+        newTrial.reinforcementDelivered = rewardResult.rewardEarned;
+        newTrial.scheduleRequirement = rewardResult.currentThreshold || 0;
+        newTrial.context = {
+            ...(context || {}),
+            reinforcersDelivered: rewardResult.rewardEarned ? 1 : 0
+        };
+
+        if (rewardResult.rewardEarned) {
+            console.log(`$$$ Reward Earned: ${participantId} | ${taskType}`);
+        }
 
         await newTrial.save();
 
         // --- earning logic ---
         const Participant = require('../models/Participant');
+        const REWARD_AMOUNT = 0.05;
+
+        // Special Logic: Coercion Opt-Out Penalty (Complete Loss)
+        // If opting out of Coercion, remove ALL earnings accumulated in this specific task.
+        if (eventType === 'OptOut' && phase && phase.toLowerCase().includes('coercion')) {
+            try {
+                // Count rewards specifically for this participant + phase + taskType
+                // This ensures we only deduct what was earned in *this* specific attempt (Current Task)
+                const rewards = await TrialLog.countDocuments({
+                    participantId,
+                    phase: phase, // e.g. "Coercion"
+                    taskType: taskType, // e.g. "matching", "sorting", or "dragging"
+                    reinforcementDelivered: true
+                });
+
+                const deduction = rewards * REWARD_AMOUNT;
+
+                if (deduction > 0) {
+                    const participant = await Participant.findOne({ participantId });
+                    if (participant) {
+                        // Deduct from global earnings
+                        participant.earnings = Math.max(0, participant.earnings - deduction);
+                        await participant.save();
+                        console.log(`Penalty Applied (Coercion): Deducted $${deduction.toFixed(2)} from ${participantId}`);
+                    }
+                }
+            } catch (err) {
+                console.error("Error applying Coercion penalty:", err);
+            }
+        }
         let currentEarnings = 0;
 
-        // If correct, find participant and increment earnings
-        // We do this for ALL phases where earnings are applicable. 
-        // Assuming earnings apply if "correct" is true, or we can check phase.
-        // For now, we apply it generally as per requirement "earn money".
-        // Pre-Training might need excluding? 
-        // The user said "Pre-Training... Experience Only - No Money" in UI.
-        // But backend doesn't know explicitly about "Pre-Training" unless checks 'phase' or 'variant'.
-        // Variant is "Pre-Training" in UI.
-
-        const isPreTraining = taskVariant === 'Pre-Training' || phase?.toLowerCase().includes('pre-training');
-
-        if (!isPreTraining && correct) {
-            const participant = await Participant.findOne({ participantId });
-            if (participant) {
-                // Increment by $0.01
-                participant.earnings = (participant.earnings || 0) + 0.01;
-                await participant.save();
-                currentEarnings = participant.earnings;
-            }
-        } else if (!isPreTraining) {
-            // Just get current earnings if incorrect
-            const participant = await Participant.findOne({ participantId });
-            if (participant) {
-                currentEarnings = participant.earnings || 0;
-            }
+        // JUST READ EARNINGS, DO NOT INCREMENT. 
+        // Reward logic is handled by taskController/rewardService via submitTaskResult.
+        const participant = await Participant.findOne({ participantId });
+        if (participant) {
+            currentEarnings = participant.earnings || 0;
         }
 
         res.status(201).json({

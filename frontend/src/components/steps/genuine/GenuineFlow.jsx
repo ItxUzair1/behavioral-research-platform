@@ -84,12 +84,12 @@ export const GenuineFlow = ({ onNext, participantId }) => {
     ];
 
     const DRAGGING_TASKS = [
-        { type: 'dragging', label: 'Dragging VR', variantId: 'vr' },
-        { type: 'dragging', label: 'Dragging PR', variantId: 'pr' }
+        { type: 'dragging', label: 'Dragging the Square', variantId: 'vr' },
+        { type: 'dragging', label: 'Dragging the Circle', variantId: 'pr' }
     ];
     const DRAGGING_OPTIONS = [
-        { id: 'vr', title: 'Dragging VR', description: 'Variable Ratio dragging task.' },
-        { id: 'pr', title: 'Dragging PR', description: 'Progressive Ratio dragging task.' }
+        { id: 'vr', title: 'Dragging the Square', description: 'Variable Ratio dragging task.' },
+        { id: 'pr', title: 'Dragging the Circle', description: 'Progressive Ratio dragging task.' }
     ];
 
     // --- Render ---

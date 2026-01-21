@@ -78,7 +78,7 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
             return {
                 type: 'dragging',
                 variant: 'pr',
-                label: 'Directed Dragging Task'
+                label: 'Dragging the Circle'
             };
         }
     };

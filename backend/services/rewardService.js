@@ -4,44 +4,37 @@ const Participant = require('../models/Participant');
 const MAX_EARNINGS = 5.00;
 const REWARD_AMOUNT = 0.05;
 const VR_MEAN = 4;
-const VR_MIN = 1;
-const VR_MAX = 8;
 const MAX_TRIALS = 200;
 
+// Bag of numbers that averages to EXACTLY 4.0
+// Sum = 44, Count = 11, Mean = 4.0
+const VR_POOL = [1, 7, 2, 6, 3, 5, 4, 4, 8, 2, 2];
+
 /**
- * Generates a Variable Ratio schedule averaging VR_MEAN
+ * Generates a Variable Ratio schedule averaging VR_MEAN using a balanced pool
  * @param {number} totalTrials - Total number of trials to cover
- * @returns {number[]} Array of thresholds (number of correct responses needed for next reward)
+ * @returns {number[]} Array of thresholds
  */
 const generateVRSchedule = (totalTrials = MAX_TRIALS) => {
     const schedule = [];
-    let currentTotal = 0;
 
-    // We generate enough thresholds to cover the max trials. 
-    // Since mean is 4, we expect roughly totalTrials / 4 rewards.
-    // We'll generate a bit more to be safe.
-    const estimatedRewards = Math.ceil(totalTrials / VR_MEAN) + 50;
+    // Helper to shuffle the pool
+    const shuffle = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    };
 
-    for (let i = 0; i < estimatedRewards; i++) {
-        // Random int between MIN and MAX
-        const threshold = Math.floor(Math.random() * (VR_MAX - VR_MIN + 1)) + VR_MIN;
-        schedule.push(threshold);
+    // Keep adding shuffled pools until we cover enough trials
+    // We estimate rewards needed: totalTrials / 4
+    const estimatedRewardsNeeded = Math.ceil(totalTrials / VR_MEAN) + 20;
+
+    while (schedule.length < estimatedRewardsNeeded) {
+        const bag = shuffle([...VR_POOL]);
+        schedule.push(...bag);
     }
-
-    // NOTE: Strictly speaking, to enforce an EXACT average of 4 over time, 
-    // we might need a more complex balancing algorithm. 
-    // But for this requirement "On average: Every 4 correct responses", 
-    // random drawing from 1-8 is a standard approximation (Mean of 1..8 is 4.5 actually).
-    // The user specified: "Randomly chosen between 1 and 8" AND "Over time, the average must equal ~4".
-    // 1+8 = 9 / 2 = 4.5. To get average 4, we might need to skew or use a pool.
-    // Let's implement a pool-based approach (flesh-bag) if we want strict average, 
-    // but standard VR is usually just random. 
-    // Given the prompt "Randomly chosen between 1 and 8", we will stick to that. 
-    // If strict mean=4 is critical, we'd adjust probability, but [1..8] uniform is 4.5.
-    // Optimization: To get closer to 4, we can simply pick from a distribution that averages 4.
-    // e.g. [1, 2, 3, 4, 5, 6, 7] -> avg 4.
-    // If range must be 1-8, avg is 4.5. 
-    // We will stick to the user's explicit rule "Randomly chosen between 1 and 8".
 
     return schedule;
 };
@@ -62,8 +55,16 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     // If Main Task (Apparent/Coercion): "matching_apparent" or "matching_coercion"
 
     // Check if Pre-Training
-    const isPreTraining = (condition && condition.toLowerCase().includes('genuine')) ||
-        (condition && condition.toLowerCase().includes('pre-training'));
+    // Check if Pre-Training
+    // Logic: Pre-Training if it explicitly says "pre-training" OR if it says "genuine" BUT NOT "execution"
+    const lowerCond = condition ? condition.toLowerCase() : '';
+    const isGenuineExecution = lowerCond.includes('genuine') && lowerCond.includes('execution');
+
+    // If it's Genuine Execution, it is NOT Pre-Training.
+    // If it's Genuine Pre-Training, it IS Pre-Training.
+    // If just "Genuine" (legacy), treat as Pre-Training unless specified.
+    const isPreTraining = lowerCond.includes('pre-training') ||
+        (lowerCond.includes('genuine') && !isGenuineExecution);
 
     let taskKey = taskType.toLowerCase();
 
@@ -106,8 +107,15 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
         // Rule: "Earnings must accumulate across Matching tasks"
         // So we stick to 'taskKey' (matching/sorting) regardless of variant.
 
+        // Defensively initialize if missing (recover from state errors)
         if (!participant.reinforcementState[taskKey]) {
-            throw new Error(`Invalid task type: ${taskType}`);
+            participant.reinforcementState[taskKey] = {
+                trialsCompleted: 0,
+                correctCount: 0,
+                scheduleIndex: 0,
+                schedule: generateVRSchedule()
+            };
+            // We need to mark modified later
         }
 
         const state = participant.reinforcementState[taskKey];
@@ -117,7 +125,7 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
             state.schedule = generateVRSchedule();
         }
 
-        const canEarnMoney = (condition === 'Apparent' || condition === 'Coercion');
+        const canEarnMoney = (condition === 'Apparent' || condition === 'Coercion' || isGenuineExecution);
 
         // Update trial counts (Main Task only)
         state.trialsCompleted += 1;
@@ -127,7 +135,16 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
             state.correctCount += 1;
 
             // Check if current threshold reached
-            const currentThreshold = state.schedule[state.scheduleIndex];
+            let currentThreshold;
+
+            // Progressive Ratio Logic for Dragging PR variant
+            // Threshold = 2^(rewardsEarned) -> 1, 2, 4, 8, 16...
+            if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
+                currentThreshold = Math.pow(2, state.scheduleIndex);
+            } else {
+                // VR Logic (Default)
+                currentThreshold = state.schedule[state.scheduleIndex];
+            }
 
             if (state.correctCount >= currentThreshold) {
                 // Check global earnings cap
@@ -149,7 +166,7 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
                 state.correctCount = 0;
                 state.scheduleIndex += 1;
 
-                if (state.scheduleIndex >= state.schedule.length) {
+                if (state.scheduleIndex >= state.schedule.length && !(taskType === 'dragging' && variant === 'pr')) {
                     state.schedule.push(...generateVRSchedule());
                 }
             }
@@ -157,13 +174,42 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     }
 
     // Save changes
+    participant.markModified('reinforcementState');
     await participant.save();
+
+    // Determine current threshold for logging purposes
+    // We re-calculate or peek at state.schedule[state.scheduleIndex]
+    // Note: if reward was earned, we already incremented scheduleIndex, so we might need the *previous* one or just log the one that was just active.
+    // For simplicity, let's log the one that was just applied.
+    // If reward earned, we moved to next index, so we should look back? 
+    // Actually, let's just re-calculate what the threshold WAS for this trial.
+    // However, simpler is just to return it if we computed it.
+    // To facilitate this, we can store `currentThreshold` in variable scope earlier.
+    // But `processTrial` is called AFTER choice. 
+
+    // Let's retrieve it from state (it's the one at current index, effectively strict requirement for NEXT reward? 
+    // OR was it the one we just contributed to?)
+    // The requirement is "How many responses needed for next reward".
+    // If we just earned a reward, the *next* requirement is valid.
+    // If we didn't, the current requirement is valid.
+    // Let's just return the value at scheduleIndex.
+
+    let loggedThreshold = 0;
+    if (participant.reinforcementState[taskKey] && participant.reinforcementState[taskKey].schedule) {
+        const s = participant.reinforcementState[taskKey];
+        if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
+            loggedThreshold = Math.pow(2, s.scheduleIndex);
+        } else if (s.schedule.length > 0) {
+            loggedThreshold = s.schedule[s.scheduleIndex] || 0;
+        }
+    }
 
     return {
         rewardEarned: rewardEarned && rewardAmount > 0,
         rewardAmount,
         totalEarnings: participant.earnings,
-        trialsCompleted: trialsCompleted
+        trialsCompleted: trialsCompleted,
+        currentThreshold: loggedThreshold // New field for logging
     };
 };
 
@@ -175,7 +221,11 @@ const startTask = async (participantId, taskType, condition, variant) => {
     if (!participant) throw new Error('Participant not found');
 
     let taskKey = taskType.toLowerCase();
-    const isPreTraining = (condition && condition.toLowerCase().includes('genuine')) || (condition && condition.toLowerCase().includes('pre-training'));
+
+    const lowerCond = condition ? condition.toLowerCase() : '';
+    const isGenuineExecution = lowerCond.includes('genuine') && lowerCond.includes('execution');
+    const isPreTraining = lowerCond.includes('pre-training') ||
+        (lowerCond.includes('genuine') && !isGenuineExecution);
 
     if (!isPreTraining && condition) {
         const suffix = condition.toLowerCase();
@@ -193,14 +243,31 @@ const startTask = async (participantId, taskType, condition, variant) => {
         trialsCompleted = participant.pre_training_completion.get(storageKey) || 0;
     } else {
         // Main Task
-        if (!participant.reinforcementState[taskKey]) {
-            // init if missing
+        if (!participant.reinforcementState) {
+            participant.reinforcementState = {};
         }
+
+        // Ensure the specific task state exists, specifically for Genuine Execution using base keys
+        if (!participant.reinforcementState[taskKey]) {
+            participant.reinforcementState[taskKey] = {
+                trialsCompleted: 0,
+                correctCount: 0,
+                scheduleIndex: 0,
+                schedule: generateVRSchedule() // Init schedule immediately
+            };
+        }
+
         const state = participant.reinforcementState[taskKey];
+
+        // Double check schedule exists (if state existed but schedule didn't)
         if (!state.schedule || state.schedule.length === 0) {
             state.schedule = generateVRSchedule();
-            await participant.save();
         }
+
+        // Important: Mark modified if using Mixed type or just to be safe with nested updates
+        participant.markModified('reinforcementState');
+        await participant.save();
+
         trialsCompleted = state.trialsCompleted;
     }
 

@@ -35,7 +35,12 @@ const participantSchema = new mongoose.Schema({
             timestamp: Date
         },
         sorting_choice: {
-            selection: String,
+            selection: String, // e.g., "letters", "syllables"
+            latency: Number,
+            timestamp: Date
+        },
+        dragging_choice: {
+            selection: String, // e.g., "vr", "pr"
             latency: Number,
             timestamp: Date
         }

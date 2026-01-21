@@ -35,6 +35,18 @@ const trialLogSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    selectedOption: {
+        type: String, // e.g., "Left", "Right", "Bin 1", or Item Name
+        default: null
+    },
+    scheduleRequirement: {
+        type: Number, // The VR/PR threshold required for this trial
+        default: null
+    },
+    eventType: {
+        type: String, // "Trial", "OptOut"
+        default: "Trial"
+    },
     timestamp: {
         type: Date,
         default: Date.now

@@ -36,8 +36,8 @@ const TASK_CONFIG = {
         icon: ArrowLeftRight
     },
     dragging: {
-        title: "Precision Dragging",
-        description: "Drag the target to the destination within the path limits.",
+        title: "Variable Ratio Schedule",
+        description: "Drag the square target to the destination to earn rewards.",
         theme: {
             bg: 'bg-orange-50',
             border: 'border-orange-200',
@@ -60,11 +60,12 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [earnings, setEarnings] = useState(0.00);
 
-    const handleSimulateTask = async (isCorrect = true, rt = 0) => {
+    const [optOutStartTime, setOptOutStartTime] = useState(null);
+
+    const handleSimulateTask = async (isCorrect = true, rt = 0, selectedOption = null) => {
         if (isSubmitting) return;
 
         // Simulate performing the task
-        // const rt = Math.floor(Math.random() * 500 + 800); // Removed hardcoded random
         setIsSubmitting(true);
         setError(null);
 
@@ -80,7 +81,9 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 phase: phase,
                 trialNumber,
                 responseTime: rt,
-                correct: isCorrect
+                correct: isCorrect,
+                selectedOption: selectedOption, // Pass selected option
+                eventType: "Trial"
             });
             setBackendLog(`Saved to DB (RT: ${rt}ms)`);
 
@@ -107,10 +110,27 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [showOptOutModal, setShowOptOutModal] = useState(false);
 
     const handleOptOutClick = () => {
+        setOptOutStartTime(Date.now()); // Start timing opt-out latency
         setShowOptOutModal(true);
     };
 
-    const handleConfirmOptOut = () => {
+    const handleConfirmOptOut = async () => {
+        const latency = Date.now() - optOutStartTime;
+
+        // Log Opt-Out Event
+        try {
+            await api.logTrial({
+                participantId: participantId || "GUEST",
+                taskType: type,
+                taskVariant: variant,
+                phase: phase,
+                trialNumber,
+                responseTime: latency,
+                correct: false,
+                eventType: "OptOut"
+            });
+        } catch (e) { console.error("Failed to log opt-out", e); }
+
         setShowOptOutModal(false);
         if (onOptOut) onOptOut();
     };
@@ -140,7 +160,11 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                     <div className="flex justify-between items-start">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h2 className={`text-xl font-bold ${config.theme.text}`}>{config.title}</h2>
+                                <h2 className={`text-xl font-bold ${config.theme.text}`}>
+                                    {type === 'dragging'
+                                        ? (variant === 'pr' ? "Dragging the Circle" : "Dragging the Square")
+                                        : config.title}
+                                </h2>
                                 {variant === 'Pre-Training' && (
                                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full border border-yellow-200 font-medium">
                                         Experience Only - No Money
@@ -178,7 +202,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />
@@ -188,7 +212,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />
@@ -198,7 +222,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt) => handleSimulateTask(correct, rt)}
+                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />

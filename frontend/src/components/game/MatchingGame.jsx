@@ -47,9 +47,21 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
     const handleDrop = async (droppedOption) => {
         if (!stimulus) return;
+
+        // Determine selected option label
+        let selectedOptionLabel = droppedOption;
+        // Check if droppedOption is an ID or Name
+        // Try to find it in stimulus options
+        if (stimulus && stimulus.options) {
+            const found = stimulus.options.find(o => o === droppedOption || o.name === droppedOption || o.id === droppedOption);
+            if (found) {
+                selectedOptionLabel = (typeof found === 'object') ? found.name : found;
+            }
+        }
+
         const isCorrect = droppedOption === stimulus.correctOption;
         const rt = Math.floor(Math.random() * 500 + 500);
-        onTrialEnd(isCorrect, rt);
+        onTrialEnd(isCorrect, rt, selectedOptionLabel);
 
         // Submit to backend
         try {

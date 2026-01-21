@@ -57,8 +57,10 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             isCorrect = true;
         }
 
+        const selectedOptionLabel = `${item.text} -> ${targetCategory}`;
+
         const rt = Math.floor(Math.random() * 500 + 500);
-        onTrialEnd(isCorrect, rt);
+        onTrialEnd(isCorrect, rt, selectedOptionLabel);
 
         // Submit
         try {
