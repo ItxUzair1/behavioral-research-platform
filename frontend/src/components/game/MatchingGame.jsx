@@ -61,9 +61,9 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
         const isCorrect = droppedOption === stimulus.correctOption;
         const rt = Math.floor(Math.random() * 500 + 500);
-        onTrialEnd(isCorrect, rt, selectedOptionLabel);
 
-        // Submit to backend
+
+        // Submit to backend FIRST to get reward info
         try {
             const res = await api.submitTaskResult({
                 participantId,
@@ -76,6 +76,13 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             if (res.success) {
                 // Update specific states
                 setInternalTrialCount(res.trialsCompleted);
+
+                // Log the trial with authoritative data
+                onTrialEnd(isCorrect, rt, selectedOptionLabel, {
+                    reward: res.reward,
+                    currentThreshold: res.currentThreshold
+                });
+
                 if (showEarnings) {
                     setEarnings(res.totalEarnings);
                     if (res.reward) setRewardData({ amount: res.amount });
@@ -87,6 +94,9 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             }
         } catch (err) {
             console.error(err);
+            // Fallback log without reward info if network fails?? 
+            // Or just log failure.
+            onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
             setTimeout(fetchNextStimulus, 500);
         }
     };

@@ -97,7 +97,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
 
     const [optOutStartTime, setOptOutStartTime] = useState(null);
 
-    const handleSimulateTask = async (isCorrect = true, rt = 0, selectedOption = null) => {
+    const handleSimulateTask = async (isCorrect = true, rt = 0, selectedOption = null, extraData = {}) => {
         if (isSubmitting) return;
 
         // Simulate performing the task
@@ -118,7 +118,9 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 responseTime: rt,
                 correct: isCorrect,
                 selectedOption: selectedOption, // Pass selected option
-                eventType: "Trial"
+                eventType: "Trial",
+                reinforcementDelivered: extraData.reward || false,
+                scheduleRequirement: extraData.currentThreshold || 0
             });
             setBackendLog(`Saved to DB (RT: ${rt}ms)`);
 
@@ -237,7 +239,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
+                            onTrialEnd={(correct, rt, option, extra) => handleSimulateTask(correct, rt, option, extra)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />
@@ -247,7 +249,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
+                            onTrialEnd={(correct, rt, option, extra) => handleSimulateTask(correct, rt, option, extra)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />
@@ -257,7 +259,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             variant={variant}
                             participantId={participantId}
                             phase={phase}
-                            onTrialEnd={(correct, rt, option) => handleSimulateTask(correct, rt, option)}
+                            onTrialEnd={(correct, rt, option, extra) => handleSimulateTask(correct, rt, option, extra)}
                             currentTrial={trialNumber}
                             totalTrials={totalTrials}
                         />

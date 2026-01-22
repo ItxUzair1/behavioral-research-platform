@@ -115,7 +115,6 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     const handleSubmit = async (isCorrect) => {
         const rt = Math.floor(Math.random() * 500 + 500); // Mock RT
         const selectedOptionLabel = isCorrect ? "Target Reached" : "Incomplete Drag";
-        onTrialEnd(isCorrect, rt, selectedOptionLabel);
 
         // Temporary success state to lock UI or animate
         setDragSuccess(true);
@@ -131,6 +130,13 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
 
             if (res.success) {
                 setInternalTrialCount(res.trialsCompleted);
+
+                // Log with authoritative data
+                onTrialEnd(isCorrect, rt, selectedOptionLabel, {
+                    reward: res.reward,
+                    currentThreshold: res.currentThreshold
+                });
+
                 if (showEarnings) {
                     setEarnings(res.totalEarnings);
                     if (res.reward) {
@@ -147,6 +153,7 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
             }
         } catch (err) {
             console.error(err);
+            onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
             setDragSuccess(false);
             setPosition(0);
         }

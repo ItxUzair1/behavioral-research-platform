@@ -46,23 +46,18 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
         // Sorting usually checks category matching.
         // Assuming stimulus.options has the category.
 
-        let isCorrect = false;
+
         // Find the item in options to verify category? 
         // Logic depends on how drag/drop is implemented.
         // Reading the code below: 
         // <div ... onDrop={() => handleDrop(opt, target)} ... >
         // It seems 'opt' is the draggable item.
 
-        if (item.category === targetCategory) {
-            isCorrect = true;
-        }
-
+        const isCorrect = item.category === targetCategory;
         const selectedOptionLabel = `${item.text} -> ${targetCategory}`;
-
         const rt = Math.floor(Math.random() * 500 + 500);
-        onTrialEnd(isCorrect, rt, selectedOptionLabel);
 
-        // Submit
+        // Submit to backend FIRST
         try {
             const res = await api.submitTaskResult({
                 participantId,
@@ -74,6 +69,13 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
 
             if (res.success) {
                 setInternalTrialCount(res.trialsCompleted);
+
+                // Log with authoritative data
+                onTrialEnd(isCorrect, rt, selectedOptionLabel, {
+                    reward: res.reward,
+                    currentThreshold: res.currentThreshold
+                });
+
                 if (showEarnings) {
                     setEarnings(res.totalEarnings);
                     if (res.reward) {
@@ -87,6 +89,8 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             }
         } catch (err) {
             console.error(err);
+            // Fallback
+            onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
             setTimeout(fetchNextStimulus, 500);
         }
     };

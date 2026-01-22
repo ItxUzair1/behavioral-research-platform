@@ -114,6 +114,17 @@ const participantSchema = new mongoose.Schema({
             trialsCompleted: { type: Number, default: 0 }
         }
     },
+    earningsByTask: {
+        matching_genuine: { type: Number, default: 0 },
+        sorting_genuine: { type: Number, default: 0 },
+        dragging_genuine: { type: Number, default: 0 },
+        matching_apparent: { type: Number, default: 0 },
+        sorting_apparent: { type: Number, default: 0 },
+        dragging_apparent: { type: Number, default: 0 },
+        matching_coercion: { type: Number, default: 0 },
+        sorting_coercion: { type: Number, default: 0 },
+        dragging_coercion: { type: Number, default: 0 }
+    },
     earnings: {
         type: Number,
         default: 0

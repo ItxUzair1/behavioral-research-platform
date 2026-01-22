@@ -195,7 +195,8 @@ exports.submitResult = async (req, res) => {
             reward: result.rewardEarned,
             amount: result.rewardAmount,
             totalEarnings: result.totalEarnings,
-            trialsCompleted: result.trialsCompleted
+            trialsCompleted: result.trialsCompleted,
+            currentThreshold: result.currentThreshold // Send back threshold for logging
         });
 
     } catch (error) {

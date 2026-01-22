@@ -147,18 +147,36 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
             }
 
             if (state.correctCount >= currentThreshold) {
-                // Check global earnings cap
                 if (participant.earnings < MAX_EARNINGS) {
                     rewardEarned = true;
                     rewardAmount = REWARD_AMOUNT;
 
-                    // Add money (cap at $5)
                     const potentialTotal = participant.earnings + REWARD_AMOUNT;
+
+                    // Add money (cap at $5)
                     if (potentialTotal > MAX_EARNINGS) {
                         rewardAmount = MAX_EARNINGS - participant.earnings;
                         participant.earnings = MAX_EARNINGS;
                     } else {
                         participant.earnings = potentialTotal;
+                    }
+
+                    // --- Update Earnings Breakdown ---
+                    let phaseSuffix = '';
+                    const lowerC = condition ? condition.toLowerCase() : '';
+                    if (lowerC.includes('apparent')) phaseSuffix = 'apparent';
+                    else if (lowerC.includes('coercion')) phaseSuffix = 'coercion';
+                    else if (isGenuineExecution) phaseSuffix = 'genuine';
+
+                    if (phaseSuffix) {
+                        const baseTask = taskType.toLowerCase();
+                        const breakdownKey = `${baseTask}_${phaseSuffix}`;
+
+                        const path = `earningsByTask.${breakdownKey}`;
+                        const currentVal = participant.get(path) || 0;
+                        participant.set(path, currentVal + rewardAmount);
+
+                        participant.markModified('earningsByTask');
                     }
                 }
 

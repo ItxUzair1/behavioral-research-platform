@@ -12,6 +12,8 @@ exports.logTrial = async (req, res) => {
             correct,
             selectedOption, // New
             eventType, // New (optional, default "Trial")
+            reinforcementDelivered, // PASSED FROM FRONTEND
+            scheduleRequirement,    // PASSED FROM FRONTEND
             context
         } = req.body;
 
@@ -30,41 +32,19 @@ exports.logTrial = async (req, res) => {
             responseTime,
             correct,
             selectedOption,
-            eventType: eventType || "Trial"
+            eventType: eventType || "Trial",
+            reinforcementDelivered: reinforcementDelivered || false,
+            scheduleRequirement: scheduleRequirement || 0,
+            context: {
+                ...(context || {}),
+                reinforcersDelivered: reinforcementDelivered ? 1 : 0
+            }
         });
 
-        // --- Fetch Schedule Requirement if it's a VR/PR task ---
-        // --- Process Reward Logic (CRITICAL: Must happen before saving log) ---
-        const rewardService = require('../services/rewardService');
-        let rewardResult = { rewardEarned: false, rewardAmount: 0, currentThreshold: 0 };
+        // REMOVED: Duplicate Reward Processing logic. use taskController for that.
 
-        try {
-            // Only process rewards if it's a valid trial (not OptOut) and not Pre-Training
-            // Actually, processTrial handles pre-training logic internally (no money), so we can just call it.
-            // But we shouldn't call strict reward logic for "OptOut" event.
-            if (eventType !== 'OptOut') {
-                rewardResult = await rewardService.processTrial(
-                    participantId,
-                    taskType,
-                    correct === true, // Ensure boolean
-                    phase,
-                    taskVariant
-                );
-            }
-        } catch (err) {
-            console.error("Reward processing error:", err);
-        }
-
-        // Apply reward result to the log entry
-        newTrial.reinforcementDelivered = rewardResult.rewardEarned;
-        newTrial.scheduleRequirement = rewardResult.currentThreshold || 0;
-        newTrial.context = {
-            ...(context || {}),
-            reinforcersDelivered: rewardResult.rewardEarned ? 1 : 0
-        };
-
-        if (rewardResult.rewardEarned) {
-            console.log(`$$$ Reward Earned: ${participantId} | ${taskType}`);
+        if (reinforcementDelivered) {
+            console.log(`$$$ Reward Logged: ${participantId} | ${taskType}`);
         }
 
         await newTrial.save();
@@ -93,8 +73,21 @@ exports.logTrial = async (req, res) => {
                     if (participant) {
                         // Deduct from global earnings
                         participant.earnings = Math.max(0, participant.earnings - deduction);
+
+                        // Also Deduct from Earnings Breakdown
+                        const baseTask = taskType.toLowerCase();
+                        const breakdownKey = `${baseTask}_coercion`;
+                        const path = `earningsByTask.${breakdownKey}`;
+
+                        const currentBreakdownVal = participant.get(path) || 0;
+                        const newBreakdownVal = Math.max(0, currentBreakdownVal - deduction);
+                        participant.set(path, newBreakdownVal);
+
+                        // Mark modified
+                        participant.markModified('earningsByTask');
+
                         await participant.save();
-                        console.log(`Penalty Applied (Coercion): Deducted $${deduction.toFixed(2)} from ${participantId}`);
+                        console.log(`Penalty Applied (Coercion): Deducted $${deduction.toFixed(2)} from ${participantId} (Global & Breakdown)`);
                     }
                 }
             } catch (err) {
