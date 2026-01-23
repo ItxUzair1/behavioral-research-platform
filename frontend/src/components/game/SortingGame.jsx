@@ -41,7 +41,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
         initTask();
     }, [variant]);
 
-    const handleDrop = async (item, targetCategory) => {
+    const handleDrop = async (item, targetCategory, targetIndex) => {
         // Validation handled by backend or frontend check?
         // Sorting usually checks category matching.
         // Assuming stimulus.options has the category.
@@ -54,7 +54,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
         // It seems 'opt' is the draggable item.
 
         const isCorrect = item.category === targetCategory;
-        const selectedOptionLabel = `${item.text} -> ${targetCategory}`;
+        const selectedOptionLabel = `Bin ${targetIndex + 1}`;
         const rt = Math.floor(Math.random() * 500 + 500);
 
         // Submit to backend FIRST
@@ -64,7 +64,8 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                 taskType: 'sorting',
                 condition: phase,
                 variant,
-                correct: isCorrect
+                correct: isCorrect,
+                selectedOption: selectedOptionLabel
             });
 
             if (res.success) {
@@ -184,7 +185,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                                 e.preventDefault();
                                 try {
                                     const data = JSON.parse(e.dataTransfer.getData("application/json"));
-                                    handleDrop(data, cat);
+                                    handleDrop(data, cat, idx);
                                 } catch (e) { console.error(e); }
                             }}
                             className="w-32 h-32 bg-white border-4 border-black flex items-center justify-center transition-colors shadow-sm"

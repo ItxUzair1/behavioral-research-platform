@@ -29,6 +29,8 @@ exports.createParticipant = async (req, res) => {
     }
 };
 
+const metricsService = require('../services/metricsService');
+
 exports.getParticipant = async (req, res) => {
     try {
         const { participantId } = req.params;
@@ -38,7 +40,14 @@ exports.getParticipant = async (req, res) => {
             return res.status(404).json({ success: false, message: "Participant not found" });
         }
 
-        res.status(200).json({ success: true, participant });
+        // Calculate dynamic trial metrics
+        const trialMetrics = await metricsService.calculateMetrics(participantId);
+
+        // Convert to plain object and attach metrics
+        const participantData = participant.toObject();
+        participantData.trialMetrics = trialMetrics;
+
+        res.status(200).json({ success: true, participant: participantData });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

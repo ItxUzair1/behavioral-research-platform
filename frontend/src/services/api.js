@@ -13,6 +13,12 @@ export const api = {
         return response.json();
     },
 
+    getParticipant: async (participantId) => {
+        const response = await fetch(`${API_BASE_URL}/participants/${participantId}`);
+        if (!response.ok) throw new Error("Failed to fetch participant");
+        return response.json();
+    },
+
     updateParticipant: async (participantId, data) => {
         const response = await fetch(`${API_BASE_URL}/participants/${participantId}`, {
             method: 'PATCH',

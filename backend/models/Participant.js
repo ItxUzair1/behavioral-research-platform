@@ -129,6 +129,17 @@ const participantSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    optOutStats: {
+        matching_genuine: { latency: Number, count: Number },
+        sorting_genuine: { latency: Number, count: Number },
+        dragging_genuine: { latency: Number, count: Number },
+        matching_apparent: { latency: Number, count: Number },
+        sorting_apparent: { latency: Number, count: Number },
+        dragging_apparent: { latency: Number, count: Number },
+        matching_coercion: { latency: Number, count: Number },
+        sorting_coercion: { latency: Number, count: Number },
+        dragging_coercion: { latency: Number, count: Number }
+    },
     timestamps: {
         consentGiven: Date,
         demographicsCompleted: Date,

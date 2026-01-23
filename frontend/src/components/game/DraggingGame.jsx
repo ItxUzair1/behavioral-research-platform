@@ -125,7 +125,8 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                 taskType: 'dragging',
                 condition: phase,
                 variant,
-                correct: isCorrect
+                correct: isCorrect,
+                selectedOption: selectedOptionLabel
             });
 
             if (res.success) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Puzzle, ArrowLeftRight, Move, Check, X } from 'lucide-react';
@@ -95,7 +95,15 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
         currentTheme = ORANGE_THEME;
     }
 
-    const [optOutStartTime, setOptOutStartTime] = useState(null);
+    // OPT-OUT LATENCY TRACKING
+    // We want time from Trial Onset -> Opt Out Click (or Confirmation?)
+    // Request says: "time from opportunity onset -> opt-out"
+    // Opportunity onset is when the trial starts.
+    const [trialStartTime, setTrialStartTime] = useState(Date.now());
+
+    useEffect(() => {
+        setTrialStartTime(Date.now());
+    }, [trialNumber]); // Reset on new trial
 
     const handleSimulateTask = async (isCorrect = true, rt = 0, selectedOption = null, extraData = {}) => {
         if (isSubmitting) return;
@@ -117,12 +125,11 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 trialNumber,
                 responseTime: rt,
                 correct: isCorrect,
-                selectedOption: selectedOption, // Pass selected option
+                selectedOption: selectedOption,
                 eventType: "Trial",
-                reinforcementDelivered: extraData.reward || false,
                 scheduleRequirement: extraData.currentThreshold || 0
             });
-            setBackendLog(`Saved to DB (RT: ${rt}ms)`);
+            setBackendLog(`Saved to DB (RT: ${rt}ms) Opt: ${selectedOption}`);
 
             if (response.earnings !== undefined) {
                 setEarnings(response.earnings);
@@ -147,12 +154,13 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [showOptOutModal, setShowOptOutModal] = useState(false);
 
     const handleOptOutClick = () => {
-        setOptOutStartTime(Date.now()); // Start timing opt-out latency
+        // setOptOutStartTime(Date.now()); // Removed as state was removed
         setShowOptOutModal(true);
     };
 
     const handleConfirmOptOut = async () => {
-        const latency = Date.now() - optOutStartTime;
+        // Latency: Time from Trial Start -> NOW
+        const latency = Date.now() - trialStartTime;
 
         // Log Opt-Out Event
         try {

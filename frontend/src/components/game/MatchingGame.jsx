@@ -53,9 +53,11 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
         // Check if droppedOption is an ID or Name
         // Try to find it in stimulus options
         if (stimulus && stimulus.options) {
-            const found = stimulus.options.find(o => o === droppedOption || o.name === droppedOption || o.id === droppedOption);
-            if (found) {
-                selectedOptionLabel = (typeof found === 'object') ? found.name : found;
+            // Find index
+            const idx = stimulus.options.findIndex(o => o === droppedOption || o.name === droppedOption || o.id === droppedOption);
+            if (idx !== -1) {
+                // selectedOptionLabel = `Position ${idx + 1} (${found.name})`; // Or just Position
+                selectedOptionLabel = `Position ${idx + 1}`;
             }
         }
 
@@ -70,7 +72,8 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 taskType: 'matching',
                 condition: phase,
                 variant,  // Pass variant
-                correct: isCorrect
+                correct: isCorrect,
+                selectedOption: selectedOptionLabel // Pass selected option
             });
 
             if (res.success) {

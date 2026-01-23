@@ -107,7 +107,7 @@ function App() {
       case 6:
         return <PostSurvey onNext={handleNext} />;
       case 7:
-        return <Payout onReset={handleReset} />;
+        return <Payout onReset={handleReset} participantId={participantId} />;
       default:
         return <div>Unknown Step</div>;
     }

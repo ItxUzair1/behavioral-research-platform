@@ -3,7 +3,47 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { CheckCircle, Download, ExternalLink } from 'lucide-react';
 
-export const Payout = ({ onReset }) => {
+import { api } from '../../services/api';
+
+export const Payout = ({ onReset, participantId }) => {
+    const handleDownload = async () => {
+        if (!participantId) return;
+        try {
+            const res = await api.getParticipant(participantId);
+            if (res.success && res.participant) {
+                // Filter out internal state not needed for analysis
+                const exportData = { ...res.participant };
+                delete exportData.reinforcementState;
+
+                // Transform Opt-Out Stats keys
+                if (exportData.optOutStats) {
+                    const newStats = {};
+                    for (const [key, val] of Object.entries(exportData.optOutStats)) {
+                        newStats[key] = {
+                            "Opt-Out Latency": val.latency,
+                            "Opt-Out Count": val.count
+                        };
+                    }
+                    exportData.optOutStats = newStats;
+                }
+
+                const json = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Participant_${participantId}_Data.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        } catch (err) {
+            console.error("Export failed", err);
+            alert("Failed to download data.");
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-lg mx-auto text-center">
             <div className="mb-8">
@@ -52,9 +92,9 @@ export const Payout = ({ onReset }) => {
                 </div>
 
                 <div className="pt-8">
-                    <Button variant="ghost" className="text-sm">
+                    <Button variant="outline" className="text-sm w-full font-bold" onClick={handleDownload}>
                         <Download className="w-4 h-4 mr-2" />
-                        Download Participation Receipt
+                        Download Full Study Data (JSON)
                     </Button>
                 </div>
 

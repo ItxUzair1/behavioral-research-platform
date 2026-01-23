@@ -55,6 +55,56 @@ exports.logTrial = async (req, res) => {
 
         // Special Logic: Coercion Opt-Out Penalty (Complete Loss)
         // If opting out of Coercion, remove ALL earnings accumulated in this specific task.
+        if (eventType === 'OptOut' && phase) {
+            try {
+                // 1. Calculate Count (Trials completed in this task so far)
+                const trialsCount = await TrialLog.countDocuments({
+                    participantId,
+                    phase: phase,
+                    taskType: taskType,
+                    eventType: 'Trial' // Only count actual trials, not other events
+                });
+
+                // 2. Identify Key
+                let suffix = '';
+                const lowerP = phase.toLowerCase();
+                if (lowerP.includes('apparent')) suffix = 'apparent';
+                else if (lowerP.includes('coercion')) suffix = 'coercion';
+                else if (lowerP.includes('genuine')) suffix = 'genuine'; // Added Genuine
+
+                if (suffix) {
+                    const baseTask = taskType.toLowerCase();
+                    const key = `${baseTask}_${suffix}`;
+
+                    // 3. Update Participant
+                    const updateField = `optOutStats.${key}`;
+                    await Participant.updateOne(
+                        { participantId },
+                        {
+                            $set: {
+                                [updateField]: {
+                                    latency: responseTime, // Passed from frontend (Time from Onset -> Click)
+                                    count: trialsCount
+                                }
+                            }
+                        }
+                    );
+                    console.log(`OptOut Stats Saved: ${key} | Latency: ${responseTime}ms | Count: ${trialsCount}`);
+                }
+
+                // 4. legacy penalty logic (keep if needed, or if covered elsewhere)
+                if (lowerP.includes('coercion')) {
+                    // ... existing penalty logic is below or integrated?
+                    // It seems the existing code block 58-96 WAS the penalty logic.
+                    // I should preserve it or merge it. 
+                }
+            } catch (err) {
+                console.error("Error saving opt-out stats:", err);
+            }
+        }
+
+        // Special Logic: Coercion Opt-Out Penalty (Complete Loss)
+        // If opting out of Coercion, remove ALL earnings accumulated in this specific task.
         if (eventType === 'OptOut' && phase && phase.toLowerCase().includes('coercion')) {
             try {
                 // Count rewards specifically for this participant + phase + taskType
