@@ -6,6 +6,24 @@ import { CheckCircle, Download, ExternalLink } from 'lucide-react';
 import { api } from '../../services/api';
 
 export const Payout = ({ onReset, participantId }) => {
+    const [earnings, setEarnings] = React.useState(0);
+
+    React.useEffect(() => {
+        const fetchEarnings = async () => {
+            if (participantId) {
+                try {
+                    const res = await api.getParticipant(participantId);
+                    if (res.success && res.participant) {
+                        setEarnings(res.participant.earnings || 0);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch earnings:", err);
+                }
+            }
+        };
+        fetchEarnings();
+    }, [participantId]);
+
     const handleDownload = async () => {
         if (!participantId) return;
         try {
@@ -54,23 +72,12 @@ export const Payout = ({ onReset, participantId }) => {
                 <p className="text-gray-500">Thank you for your participation.</p>
             </div>
 
-            <Card className="text-left bg-gray-900 text-white border-none shadow-xl">
+            <Card className="text-left bg-white text-gray-900 border-2 border-gray-100 shadow-xl">
                 <div className="flex flex-col gap-6">
                     <div>
-                        <p className="text-gray-400 text-sm font-medium mb-1">Total Earnings</p>
-                        <div className="text-5xl font-extrabold tracking-tighter">
-                            $7.50
-                        </div>
-                    </div>
-
-                    <div className="space-y-3 pt-6 border-t border-gray-800">
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-400">Base Pay</span>
-                            <span className="font-mono">$2.50</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-400">Performance Bonus</span>
-                            <span className="font-mono text-green-400">+$5.00</span>
+                        <p className="text-gray-600 text-xl font-bold mb-2 uppercase tracking-wide">Total Earnings</p>
+                        <div className="text-6xl font-black tracking-tighter text-gray-900">
+                            ${earnings.toFixed(2)}
                         </div>
                     </div>
                 </div>

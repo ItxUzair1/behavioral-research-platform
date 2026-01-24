@@ -216,9 +216,24 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     if (participant.reinforcementState[taskKey] && participant.reinforcementState[taskKey].schedule) {
         const s = participant.reinforcementState[taskKey];
         if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
-            loggedThreshold = Math.pow(2, s.scheduleIndex);
+            // If reward was JUST earned, s.scheduleIndex was incremented.
+            // We want the threshold that was just completed (previous index).
+            if (rewardEarned) {
+                // Use index - 1 (safe check > 0 usually true if index just inc)
+                loggedThreshold = Math.pow(2, Math.max(0, s.scheduleIndex - 1));
+            } else {
+                // Otherwise use current
+                loggedThreshold = Math.pow(2, s.scheduleIndex);
+            }
         } else if (s.schedule.length > 0) {
-            loggedThreshold = s.schedule[s.scheduleIndex] || 0;
+            // For VR, similar logic if we want the "just completed" req?
+            // Usually VR req is random. If we moved index, we moved to next req.
+            // If reward earned, we want the one we just did.
+            if (rewardEarned) {
+                loggedThreshold = s.schedule[Math.max(0, s.scheduleIndex - 1)] || 0;
+            } else {
+                loggedThreshold = s.schedule[s.scheduleIndex] || 0;
+            }
         }
     }
 

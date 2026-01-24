@@ -140,6 +140,12 @@ const participantSchema = new mongoose.Schema({
         sorting_coercion: { latency: Number, count: Number },
         dragging_coercion: { latency: Number, count: Number }
     },
+    postSurvey: {
+        instructionsClarity: String, // Was q1
+        feltRushed: String,          // Was q2
+        feedback: String,            // Was q3
+        timestamp: Date
+    },
     timestamps: {
         consentGiven: Date,
         demographicsCompleted: Date,

@@ -105,7 +105,7 @@ function App() {
       case 5:
         return <CoercionFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
       case 6:
-        return <PostSurvey onNext={handleNext} />;
+        return <PostSurvey onNext={handleNext} participantId={participantId} />;
       case 7:
         return <Payout onReset={handleReset} participantId={participantId} />;
       default:

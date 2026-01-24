@@ -75,8 +75,14 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         // Use REFINED value from Ref
         if (positionRef.current > 75) {
             handleSubmit(true);
+        } else if (positionRef.current > 20) {
+            // Log Incomplete Effort (Failed but attempted)
+            // PR only cares about "responses emitted"
+            handleSubmit(false);
+            setPosition(0);
+            positionRef.current = 0;
         } else {
-            // Snap back
+            // Snap back (too small to count)
             setPosition(0);
             positionRef.current = 0;
         }

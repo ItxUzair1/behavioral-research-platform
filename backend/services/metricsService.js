@@ -60,7 +60,7 @@ exports.calculateMetrics = async (participantId) => {
                 }
 
                 // Track Side Bias (Position 1, 2, 3)
-                if (log.selectedOption) {
+                if (log.selectedOption && typeof log.selectedOption === 'string') {
                     const choice = log.selectedOption.toLowerCase();
                     // Match "Position X" or "Bin X"
                     if (choice.includes('position 1') || choice.includes('bin 1') || choice.includes('left')) {
@@ -69,6 +69,19 @@ exports.calculateMetrics = async (participantId) => {
                         group.countPos2 = (group.countPos2 || 0) + 1;
                     } else if (choice.includes('position 3') || choice.includes('bin 3') || choice.includes('right')) {
                         group.countPos3 = (group.countPos3 || 0) + 1;
+                    }
+                }
+
+                // Track totalPRResponses (Dragging PR only)
+                if (log.taskType && log.taskType.toLowerCase() === 'dragging') {
+                    const isPR = (log.taskVariant && log.taskVariant === 'pr') || (log.scheduleRequirement && log.scheduleRequirement > 0);
+                    if (isPR) {
+                        group.totalPRResponses = (group.totalPRResponses || 0) + 1;
+
+                        // Calculate Breakpoint: Max scheduleRequirement that was REINFORCED
+                        if (log.reinforcementDelivered && log.scheduleRequirement) {
+                            group.breakpoint = Math.max((group.breakpoint || 0), log.scheduleRequirement);
+                        }
                     }
                 }
             }
@@ -133,18 +146,13 @@ exports.calculateMetrics = async (participantId) => {
         Object.keys(metrics).forEach(key => {
             if (metrics[key].reinforcerCount === undefined) metrics[key].reinforcerCount = 0;
             if (metrics[key].reinforcementRatePerMin === undefined) metrics[key].reinforcementRatePerMin = 0;
+            if (metrics[key].totalPRResponses === undefined) metrics[key].totalPRResponses = 0;
+            if (metrics[key].breakpoint === undefined) metrics[key].breakpoint = 0;
 
-            // Responses per Reinforcer
-            const totalTrials = metrics[key].totalTrials || 0;
-            const reinforcers = metrics[key].reinforcerCount;
-
-            if (reinforcers > 0) {
-                metrics[key].responsesPerReinforcer = parseFloat((totalTrials / reinforcers).toFixed(2));
-                metrics[key].responsesPerReinforcer = 0;
-            }
+            // (Logic moved to main loop)
 
             // Side Bias / Perseveration Index
-            // totalTrials already defined above
+            const totalTrials = metrics[key].totalTrials || 0;
             const countPos1 = metrics[key].countPos1 || 0;
             const countPos2 = metrics[key].countPos2 || 0;
             const countPos3 = metrics[key].countPos3 || 0;
@@ -179,6 +187,7 @@ exports.calculateMetrics = async (participantId) => {
 
     } catch (error) {
         console.error("Error calculating metrics:", error);
+        console.error(error.stack); // ADDED
         throw error;
     }
 };

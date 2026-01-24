@@ -86,7 +86,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const isApparent = phase?.toLowerCase().includes('apparent');
     const isCoercion = phase?.toLowerCase().includes('coercion');
 
-    if (type === 'dragging' && isGenuineOrPre) {
+    if ((type === 'dragging' || type === 'matching') && isGenuineOrPre) {
         // Reuse Sorting's Green Theme
         currentTheme = TASK_CONFIG.sorting.theme;
     } else if (isApparent) {
@@ -127,6 +127,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 correct: isCorrect,
                 selectedOption: selectedOption,
                 eventType: "Trial",
+                reinforcementDelivered: extraData.reward || false,
                 scheduleRequirement: extraData.currentThreshold || 0
             });
             setBackendLog(`Saved to DB (RT: ${rt}ms) Opt: ${selectedOption}`);
@@ -275,9 +276,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                 </div>
 
                 <div className="absolute bottom-4 left-4 p-2 flex flex-col items-start gap-1">
-                    <div className="bg-black/5 rounded px-2 py-1 text-[10px] text-gray-400 font-mono">
-                        Mode: Pre-Training | backend_log: {backendLog || 'pending'}
-                    </div>
+                    {/* Debug Info Removed */}
                     {error && (
                         <div className="bg-red-50 text-red-600 px-2 py-1 rounded text-xs border border-red-200">
                             {error}
