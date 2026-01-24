@@ -1,10 +1,15 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+const HEADERS = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+};
 
 export const api = {
     createParticipant: async () => {
         const response = await fetch(`${API_BASE_URL}/participants`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: HEADERS
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -14,7 +19,7 @@ export const api = {
     },
 
     getParticipant: async (participantId) => {
-        const response = await fetch(`${API_BASE_URL}/participants/${participantId}`);
+        const response = await fetch(`${API_BASE_URL}/participants/${participantId}`, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to fetch participant");
         return response.json();
     },
@@ -22,7 +27,7 @@ export const api = {
     updateParticipant: async (participantId, data) => {
         const response = await fetch(`${API_BASE_URL}/participants/${participantId}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HEADERS,
             body: JSON.stringify(data)
         });
         if (!response.ok) {
@@ -35,7 +40,7 @@ export const api = {
     logTrial: async (trialData) => {
         const response = await fetch(`${API_BASE_URL}/trials`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HEADERS,
             body: JSON.stringify(trialData)
         });
         if (!response.ok) {
@@ -46,7 +51,7 @@ export const api = {
     },
 
     getStimulus: async (type, variant) => {
-        const response = await fetch(`${API_BASE_URL}/tasks/stimulus?type=${type}&variant=${variant}`);
+        const response = await fetch(`${API_BASE_URL}/tasks/stimulus?type=${type}&variant=${variant}`, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to fetch stimulus");
         return response.json();
     },
@@ -54,7 +59,7 @@ export const api = {
     submitTaskResult: async (data) => {
         const response = await fetch(`${API_BASE_URL}/tasks/submit`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HEADERS,
             body: JSON.stringify(data)
         });
         if (!response.ok) throw new Error("Failed to submit result");
@@ -64,7 +69,7 @@ export const api = {
     startTask: async (participantId, taskType, condition, variant) => {
         const response = await fetch(`${API_BASE_URL}/tasks/start-task`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HEADERS,
             body: JSON.stringify({ participantId, taskType, condition, variant })
         });
         if (!response.ok) throw new Error("Failed to start task");
@@ -72,7 +77,7 @@ export const api = {
     },
 
     getEarnings: async (participantId) => {
-        const response = await fetch(`${API_BASE_URL}/tasks/earnings?participantId=${participantId}`);
+        const response = await fetch(`${API_BASE_URL}/tasks/earnings?participantId=${participantId}`, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to get earnings");
         return response.json();
     }
