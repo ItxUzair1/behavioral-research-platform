@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { PreTraining } from './PreTraining';
 import { ChoiceSelection } from './ChoiceSelection';
 import { TaskTrialUI } from './TaskTrialUI';
-import { ConditionTask } from '../ConditionTask'; // Re-use potentially or use new Execution UI
+import { MiniSurvey } from '../../common/MiniSurvey';
 
 export const GenuineFlow = ({ onNext, participantId }) => {
-    // Phases: matching_pt -> matching_choice -> execution -> sorting_pt -> sorting_choice -> dragging_pt -> next
+    // Phases: matching_pt -> matching_choice -> execution -> sorting_pt -> sorting_choice -> dragging_pt -> dragging_choice -> execution(dragging) -> survey -> next
     const [phase, setPhase] = useState('matching_pt');
-    const [choices, setChoices] = useState({ matching: null, sorting: null });
+    const [choices, setChoices] = useState({ matching: null, sorting: null, dragging: null });
     const [executionTask, setExecutionTask] = useState(null);
     const [executionType, setExecutionType] = useState('matching');
 
@@ -26,7 +26,7 @@ export const GenuineFlow = ({ onNext, participantId }) => {
             } else if (executionType === 'sorting') {
                 setPhase('dragging_pt');
             } else if (executionType === 'dragging') {
-                onNext(null, null, choices);
+                setPhase('survey'); // Go to Survey
             }
         } else if (phase === 'sorting_pt') {
             setPhase('sorting_choice');
@@ -39,12 +39,13 @@ export const GenuineFlow = ({ onNext, participantId }) => {
         } else if (phase === 'dragging_pt') {
             setPhase('dragging_choice');
         } else if (phase === 'dragging_choice') {
-            // Dragging Choice Logic
             setChoices(prev => ({ ...prev, dragging: choiceData }));
             const selectedVariant = typeof choiceData === 'object' ? choiceData.selection : choiceData;
             setExecutionTask(selectedVariant || 'vr');
             setExecutionType('dragging');
             setPhase('execution');
+        } else if (phase === 'survey') {
+            onNext(null, null, choices);
         }
     };
 
@@ -55,7 +56,10 @@ export const GenuineFlow = ({ onNext, participantId }) => {
             } else if (executionType === 'sorting') {
                 setPhase('dragging_pt');
             } else if (executionType === 'dragging') {
-                onNext(null, null, choices);
+                setPhase('survey'); // Go to Survey on Opt Out too?? 
+                // Requirement: "mini survey after completion of each condition". 
+                // Opting out of a task effectively ends that task. 
+                // If they opt out of dragging (last task), they finish the condition. So yes, Survey.
             }
         } else {
             if (window.confirm("Are you sure you want to opt out of this task?")) {
@@ -154,6 +158,14 @@ export const GenuineFlow = ({ onNext, participantId }) => {
         />;
     }
 
+    if (phase === 'survey') {
+        return <MiniSurvey
+            phase="Genuine"
+            participantId={participantId}
+            onComplete={handlePhaseComplete}
+        />;
+    }
+
     return null;
 };
 
@@ -161,7 +173,9 @@ export const GenuineFlow = ({ onNext, participantId }) => {
 const ExecutionPhase = ({ type, initialVariant, onComplete, participantId, onEndTask }) => {
     const [trial, setTrial] = useState(1);
     const [variant, setVariant] = useState(initialVariant);
-    const TOTAL_TRIALS = 200;
+
+    // Dynamic Trial Counts: 100 for Matching/Sorting, 200 for Dragging
+    const TOTAL_TRIALS = type === 'dragging' ? 200 : 100;
 
     const handleNextTrial = () => {
         if (trial < TOTAL_TRIALS) {
@@ -184,6 +198,11 @@ const ExecutionPhase = ({ type, initialVariant, onComplete, participantId, onEnd
 
     return (
         <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6">
+                <h2 className="text-xl font-bold text-green-900 mb-1">Condition 1</h2>
+                <p className="text-green-700">Please complete the assigned tasks.</p>
+            </div>
+
             <div className="text-center pb-2">
                 <h2 className="text-2xl font-bold text-emerald-900">Task Execution Phase</h2>
                 <p className="text-emerald-700 opacity-80">Accumulate earnings by completing tasks.</p>

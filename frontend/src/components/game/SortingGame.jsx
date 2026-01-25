@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { RewardModal } from '../common/RewardModal';
+import { playTrialCompleteSound } from '../../utils/audio';
 
 export const SortingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [stimulus, setStimulus] = useState(null);
@@ -14,7 +15,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
 
     // Use props if available (Execution/Apparent), else fallback to internal logic (Pre-Training initial load)
     const displayTrial = currentTrial || internalTrialCount;
-    const displayMax = totalTrials || (isPreTraining ? 15 : 200);
+    const displayMax = totalTrials || (isPreTraining ? 10 : 200);
 
     // Show earnings if NOT Pre-Training
     const showEarnings = !isPreTraining;
@@ -69,6 +70,9 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             });
 
             if (res.success) {
+                // Play success sound
+                playTrialCompleteSound();
+
                 setInternalTrialCount(res.trialsCompleted);
 
                 // Log with authoritative data
@@ -77,15 +81,16 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                     currentThreshold: res.currentThreshold
                 });
 
-                if (showEarnings) {
-                    setEarnings(res.totalEarnings);
-                    if (res.reward) {
-                        setRewardData({ amount: res.amount });
-                    } else {
-                        setTimeout(fetchNextStimulus, 500);
-                    }
+                // Handle Reward Modal - Show regardless of phase if triggered
+                if (res.reward) {
+                    setRewardData({ amount: res.amount });
                 } else {
                     setTimeout(fetchNextStimulus, 500);
+                }
+
+                // Handle Earnings Display
+                if (showEarnings) {
+                    setEarnings(res.totalEarnings);
                 }
             }
         } catch (err) {

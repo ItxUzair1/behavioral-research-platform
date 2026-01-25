@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { TaskTrialUI } from '../genuine/TaskTrialUI';
 import { Card } from '../../ui/Card';
+import { MiniSurvey } from '../../common/MiniSurvey';
 
 export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
     // Steps: 
-    // 0: Matching (Same as Genuine)
-    // 1: Sorting (Opposite of Genuine)
-    // 2: Dragging (Progressive Ratio)
+    // 0: Matching
+    // 1: Sorting
+    // 2: Dragging
+    // 3: Mini Survey
     const [step, setStep] = useState(0);
     const [trial, setTrial] = useState(1);
-    const TOTAL_TRIALS = 200;
 
     const handleStepComplete = () => {
-        if (step < 2) {
+        if (step < 3) {
             setStep(s => s + 1);
             setTrial(1); // Reset trial count for next task
         } else {
@@ -21,7 +22,8 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
     };
 
     const handleNextTrial = () => {
-        if (trial < TOTAL_TRIALS) {
+        const currentTotal = taskConfig.type === 'dragging' ? 200 : 100;
+        if (trial < currentTotal) {
             setTrial(t => t + 1);
         } else {
             handleStepComplete();
@@ -29,9 +31,7 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
     };
 
     const handleOptOut = () => {
-        if (window.confirm("Are you sure you want to opt out of this task?")) {
-            handleStepComplete();
-        }
+        handleStepComplete();
     };
 
     // Determine tasks based on choices
@@ -74,12 +74,21 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
         }
     };
 
+
+    if (step === 3) {
+        return <MiniSurvey
+            phase="Apparent"
+            participantId={participantId}
+            onComplete={handleStepComplete}
+        />;
+    }
+
     const taskConfig = getTaskConfig();
 
     return (
         <div className="space-y-4">
             <div className="bg-violet-50 border border-violet-200 p-4 rounded-xl mb-6">
-                <h2 className="text-xl font-bold text-violet-900 mb-1">Apparent Assent Phase</h2>
+                <h2 className="text-xl font-bold text-violet-900 mb-1">Condition 2</h2>
                 <p className="text-violet-700">Please complete the assigned tasks.</p>
             </div>
 
@@ -94,7 +103,7 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
                 variant={taskConfig.variant}
                 phase="Apparent"
                 trialNumber={trial}
-                totalTrials={TOTAL_TRIALS}
+                totalTrials={taskConfig.type === 'dragging' ? 200 : 100}
                 onComplete={handleNextTrial}
                 participantId={participantId}
                 onOptOut={handleOptOut}

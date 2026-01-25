@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { TaskTrialUI } from '../genuine/TaskTrialUI';
 import { Card } from '../../ui/Card';
+import { MiniSurvey } from '../../common/MiniSurvey';
 
 export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
     // Steps: 
-    // 0: Matching (Same as Genuine)
-    // 1: Sorting (Opposite of Genuine)
-    // 2: Dragging (Progressive Ratio)
+    // 0: Matching
+    // 1: Sorting
+    // 2: Dragging
+    // 3: Mini Survey
     const [step, setStep] = useState(0);
     const [trial, setTrial] = useState(1);
-    const TOTAL_TRIALS = 200;
 
     const handleStepComplete = () => {
-        if (step < 2) {
+        if (step < 3) {
             setStep(s => s + 1);
             setTrial(1); // Reset
         } else {
@@ -21,7 +22,8 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
     };
 
     const handleNextTrial = () => {
-        if (trial < TOTAL_TRIALS) {
+        const currentTotal = taskConfig.type === 'dragging' ? 200 : 100;
+        if (trial < currentTotal) {
             setTrial(t => t + 1);
         } else {
             handleStepComplete();
@@ -83,12 +85,20 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
         }
     };
 
+    if (step === 3) {
+        return <MiniSurvey
+            phase="Coercion"
+            participantId={participantId}
+            onComplete={handleStepComplete}
+        />;
+    }
+
     const taskConfig = getTaskConfig();
 
     return (
         <div className="space-y-4">
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-6">
-                <h2 className="text-xl font-bold text-amber-900 mb-1">Directed Task Phase</h2>
+                <h2 className="text-xl font-bold text-amber-900 mb-1">Condition 3</h2>
                 <p className="text-amber-700">You must complete the assigned tasks.</p>
             </div>
 
@@ -103,7 +113,7 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
                 variant={taskConfig.variant}
                 phase="Coercion"
                 trialNumber={trial}
-                totalTrials={TOTAL_TRIALS}
+                totalTrials={taskConfig.type === 'dragging' ? 200 : 100}
                 onComplete={handleNextTrial}
                 participantId={participantId}
                 onOptOut={handleOptOut}

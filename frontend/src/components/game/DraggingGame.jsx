@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { RewardModal } from '../common/RewardModal';
+import { playTrialCompleteSound } from '../../utils/audio';
 
 export const DraggingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [loading, setLoading] = useState(true);
@@ -18,7 +19,7 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     const isGenuine = phase?.toLowerCase().includes('genuine');
     const isPreTraining = phase?.toLowerCase().includes('pre-training');
     const displayTrial = currentTrial || internalTrialCount;
-    const displayMax = totalTrials || (isPreTraining ? 15 : 200);
+    const displayMax = totalTrials || (isPreTraining ? 10 : 200);
     const showEarnings = !isPreTraining;
 
     // Config based on variant
@@ -57,11 +58,23 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         const rawX = clientX - rect.left;
         const width = rect.width;
 
-        // Constrain to 0 - 100%
-        // Adjust for handle width (approx 80px or 10%)
+        // Handle width is w-24 = 96px
+        const handleWidthPx = 96;
+        const handlePercent = (handleWidthPx / width) * 100;
+        const maxPos = 100 - handlePercent;
+
+        // Constrain
         let newPos = (rawX / width) * 100;
+
+        // Center the drag on cursor? 
+        // Previously rawX was used directly as 'left'. 
+        // If we want the cursor to be in the middle of the handle, offset by half handle.
+        // But the previous logic just used rawX. Let's stick to rawX to minimize behavioral change, 
+        // essentially the cursor pulls the left edge.
+        // If users complain about "grabbing the middle", we can adjust: newPos = ((rawX - handleWidthPx/2) / width) * 100
+
         if (newPos < 0) newPos = 0;
-        if (newPos > 90) newPos = 90; // Stop before end
+        if (newPos > maxPos) newPos = maxPos;
 
         setPosition(newPos);
         positionRef.current = newPos; // Update Ref
@@ -75,12 +88,6 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         // Use REFINED value from Ref
         if (positionRef.current > 75) {
             handleSubmit(true);
-        } else if (positionRef.current > 20) {
-            // Log Incomplete Effort (Failed but attempted)
-            // PR only cares about "responses emitted"
-            handleSubmit(false);
-            setPosition(0);
-            positionRef.current = 0;
         } else {
             // Snap back (too small to count)
             setPosition(0);
@@ -136,6 +143,9 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
             });
 
             if (res.success) {
+                // Play success sound
+                playTrialCompleteSound();
+
                 setInternalTrialCount(res.trialsCompleted);
 
                 // Log with authoritative data
@@ -144,18 +154,19 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                     currentThreshold: res.currentThreshold
                 });
 
-                if (showEarnings) {
-                    setEarnings(res.totalEarnings);
-                    if (res.reward) {
-                        setRewardData({ amount: res.amount });
-                    } else {
-                        // Reset immediately
-                        setDragSuccess(false);
-                        setPosition(0);
-                    }
+                // Handle Reward Modal - Show regardless of phase if triggered
+                if (res.reward) {
+                    setRewardData({ amount: res.amount });
+                    // If reward, we wait for modal close to reset
                 } else {
+                    // No reward, reset immediately
                     setDragSuccess(false);
                     setPosition(0);
+                }
+
+                // Handle Earnings Display
+                if (showEarnings) {
+                    setEarnings(res.totalEarnings);
                 }
             }
         } catch (err) {

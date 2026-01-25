@@ -50,110 +50,101 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     const participant = await Participant.findOne({ participantId });
     if (!participant) throw new Error('Participant not found');
 
-    // Determine strict task key based on logic:
-    // If Pre-Training: "matching" (generic)
-    // If Main Task (Apparent/Coercion): "matching_apparent" or "matching_coercion"
-
-    // Check if Pre-Training
-    // Check if Pre-Training
-    // Logic: Pre-Training if it explicitly says "pre-training" OR if it says "genuine" BUT NOT "execution"
     const lowerCond = condition ? condition.toLowerCase() : '';
     const isGenuineExecution = lowerCond.includes('genuine') && lowerCond.includes('execution');
 
-    // If it's Genuine Execution, it is NOT Pre-Training.
-    // If it's Genuine Pre-Training, it IS Pre-Training.
-    // If just "Genuine" (legacy), treat as Pre-Training unless specified.
+    // Logic: Pre-Training if it explicitly says "pre-training" OR if it says "genuine" BUT NOT "execution"
     const isPreTraining = lowerCond.includes('pre-training') ||
         (lowerCond.includes('genuine') && !isGenuineExecution);
 
     let taskKey = taskType.toLowerCase();
 
-    if (!isPreTraining && condition) {
+    // Determine the key for reinforcementState
+    if (isPreTraining) {
+        // For Pre-Training, we now also use unique keys in reinforcementState to track schedules
+        // We use the same suffix logic or just base keys if we want to reuse schedules?
+        // User wants "same logic", implying standard VR/PR.
+        // Let's use separate keys for Pre-Training to avoid messing up Main Task schedules if they ever overlap?
+        // Actually, Pre-Training is separate. Let's use specific keys to be safe and clean.
+        // "matching_genuine", "sorting_genuine", "dragging_genuine"?
+        // Or if the condition is "Genuine Assent", we can map it.
+
+        // Wait, the participant schema has "matching", "sorting", "dragging" as generic/legacy.
+        // Let's use those for Pre-Training (Genuine), or explicit "genuine" keys if schema supports.
+        // Schema has `matching_genuine` in `earningsByTask` but NOT in `reinforcementState`.
+        // Schema has `matching` (legacy).
+        // Let's use the BASE keys (`matching`, `sorting`, `dragging`) for Pre-Training/Genuine phase
+        // and the suffixed keys (`matching_apparent`) for others.
+        // This aligns with how `startTask` was setting up `matching_apparent`.
+    } else {
         // Apparent or Coercion
-        const suffix = condition.toLowerCase();
-        // user might send "Apparent Assent" -> just use "apparent" if contained
-        if (suffix.includes('apparent')) taskKey += '_apparent';
-        else if (suffix.includes('coercion')) taskKey += '_coercion';
-        // else fallback to generic taskKey
+        if (lowerCond.includes('apparent')) taskKey += '_apparent';
+        else if (lowerCond.includes('coercion')) taskKey += '_coercion';
     }
 
     let rewardEarned = false;
     let rewardAmount = 0;
     let trialsCompleted = 0;
 
-    if (isPreTraining) {
-        // --- Pre-Training Logic ---
-        // Store in pre_training_completion Map
-        // Key format: "matching" or "sorting", BUT we need to distinguish variants if provided.
-        // User reported issues keeping variants separate.
-        // Construct key: if variant exists, use "task_variant", else "task"
-        // sanitize variant
-        const variantKey = variant ? `_${variant.toLowerCase().replace(/\s+/g, '')}` : '';
-        const storageKey = `${taskKey}${variantKey}`;
+    // --- Unified Logic using reinforcementState ---
 
-        if (!participant.pre_training_completion) participant.pre_training_completion = new Map();
+    // 1. Ensure State Exists
+    if (!participant.reinforcementState) {
+        participant.reinforcementState = {};
+    }
+    if (!participant.reinforcementState[taskKey]) {
+        participant.reinforcementState[taskKey] = {
+            trialsCompleted: 0,
+            correctCount: 0,
+            scheduleIndex: 0,
+            schedule: generateVRSchedule()
+        };
+    }
 
-        let currentCount = participant.pre_training_completion.get(storageKey) || 0;
-        currentCount += 1;
-        participant.pre_training_completion.set(storageKey, currentCount);
+    const state = participant.reinforcementState[taskKey];
 
-        trialsCompleted = currentCount;
+    // Initialize schedule if empty
+    if (!state.schedule || state.schedule.length === 0) {
+        state.schedule = generateVRSchedule();
+    }
 
-        // NO MONEY LOGIC for Pre-Training
+    // 2. Update Counts
+    state.trialsCompleted += 1;
+    trialsCompleted = state.trialsCompleted;
 
-    } else {
-        // --- Main Task Logic (Apparent / Coercion) ---
-        // Main Task accumulates across variants usually, or uses the base matching/sorting key.
-        // Rule: "Earnings must accumulate across Matching tasks"
-        // So we stick to 'taskKey' (matching/sorting) regardless of variant.
+    // 3. Check Rewards
+    // "Earning" logic applies to everyone for the sake of the NOTIFICATION
+    // But actual MONEY accumulation applies only to Main Tasks (and Genuine Execution)
+    const canIsolateMoney = isPreTraining; // If Pre-Training, we DO NOT add money to total
 
-        // Defensively initialize if missing (recover from state errors)
-        if (!participant.reinforcementState[taskKey]) {
-            participant.reinforcementState[taskKey] = {
-                trialsCompleted: 0,
-                correctCount: 0,
-                scheduleIndex: 0,
-                schedule: generateVRSchedule()
-            };
-            // We need to mark modified later
+    if (isCorrect) {
+        state.correctCount += 1;
+
+        // Check threshold
+        let currentThreshold;
+        if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
+            currentThreshold = Math.pow(2, state.scheduleIndex);
+        } else {
+            currentThreshold = state.schedule[state.scheduleIndex];
         }
 
-        const state = participant.reinforcementState[taskKey];
+        if (state.correctCount >= currentThreshold) {
+            // Reward Triggered!
+            rewardEarned = true;
 
-        // Initialize schedule if empty
-        if (!state.schedule || state.schedule.length === 0) {
-            state.schedule = generateVRSchedule();
-        }
+            // Calculate Amount (Always 0.05 for display)
+            const nominalAmount = REWARD_AMOUNT;
 
-        const canEarnMoney = (condition === 'Apparent' || condition === 'Coercion' || isGenuineExecution);
-
-        // Update trial counts (Main Task only)
-        state.trialsCompleted += 1;
-        trialsCompleted = state.trialsCompleted;
-
-        if (isCorrect && canEarnMoney) {
-            state.correctCount += 1;
-
-            // Check if current threshold reached
-            let currentThreshold;
-
-            // Progressive Ratio Logic for Dragging PR variant
-            // Threshold = 2^(rewardsEarned) -> 1, 2, 4, 8, 16...
-            if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
-                currentThreshold = Math.pow(2, state.scheduleIndex);
+            if (isPreTraining) {
+                // Pre-Training: Show reward, but DO NOT add to participant.earnings
+                rewardAmount = nominalAmount;
+                // We return this amount so frontend shows "$0.05", but we don't save it to DB earnings.
             } else {
-                // VR Logic (Default)
-                currentThreshold = state.schedule[state.scheduleIndex];
-            }
-
-            if (state.correctCount >= currentThreshold) {
+                // Main Task: Add to earnings (capped)
                 if (participant.earnings < MAX_EARNINGS) {
-                    rewardEarned = true;
-                    rewardAmount = REWARD_AMOUNT;
+                    rewardAmount = nominalAmount;
+                    const potentialTotal = participant.earnings + nominalAmount;
 
-                    const potentialTotal = participant.earnings + REWARD_AMOUNT;
-
-                    // Add money (cap at $5)
                     if (potentialTotal > MAX_EARNINGS) {
                         rewardAmount = MAX_EARNINGS - participant.earnings;
                         participant.earnings = MAX_EARNINGS;
@@ -161,74 +152,53 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
                         participant.earnings = potentialTotal;
                     }
 
-                    // --- Update Earnings Breakdown ---
+                    // Update Breakdown
                     let phaseSuffix = '';
-                    const lowerC = condition ? condition.toLowerCase() : '';
-                    if (lowerC.includes('apparent')) phaseSuffix = 'apparent';
-                    else if (lowerC.includes('coercion')) phaseSuffix = 'coercion';
+                    if (lowerCond.includes('apparent')) phaseSuffix = 'apparent';
+                    else if (lowerCond.includes('coercion')) phaseSuffix = 'coercion';
                     else if (isGenuineExecution) phaseSuffix = 'genuine';
 
                     if (phaseSuffix) {
                         const baseTask = taskType.toLowerCase();
                         const breakdownKey = `${baseTask}_${phaseSuffix}`;
-
                         const path = `earningsByTask.${breakdownKey}`;
-                        const currentVal = participant.get(path) || 0;
-                        participant.set(path, currentVal + rewardAmount);
-
-                        participant.markModified('earningsByTask');
+                        // Mongoose Map get/set or direct object access? 
+                        // Schema says earningsByTask is an Object with keys, not a Map.
+                        // Access via dot notation string? No, simple object access.
+                        if (participant.earningsByTask) {
+                            participant.earningsByTask[breakdownKey] = (participant.earningsByTask[breakdownKey] || 0) + rewardAmount;
+                        }
                     }
                 }
+            }
 
-                // Advance schedule
-                state.correctCount = 0;
-                state.scheduleIndex += 1;
+            // Advance schedule
+            state.correctCount = 0;
+            state.scheduleIndex += 1;
 
-                if (state.scheduleIndex >= state.schedule.length && !(taskType === 'dragging' && variant === 'pr')) {
-                    state.schedule.push(...generateVRSchedule());
-                }
+            if (state.scheduleIndex >= state.schedule.length && !(taskType === 'dragging' && variant === 'pr')) {
+                state.schedule.push(...generateVRSchedule());
             }
         }
     }
 
     // Save changes
     participant.markModified('reinforcementState');
+    participant.markModified('earningsByTask'); // helper
     await participant.save();
 
     // Determine current threshold for logging purposes
-    // We re-calculate or peek at state.schedule[state.scheduleIndex]
-    // Note: if reward was earned, we already incremented scheduleIndex, so we might need the *previous* one or just log the one that was just active.
-    // For simplicity, let's log the one that was just applied.
-    // If reward earned, we moved to next index, so we should look back? 
-    // Actually, let's just re-calculate what the threshold WAS for this trial.
-    // However, simpler is just to return it if we computed it.
-    // To facilitate this, we can store `currentThreshold` in variable scope earlier.
-    // But `processTrial` is called AFTER choice. 
-
-    // Let's retrieve it from state (it's the one at current index, effectively strict requirement for NEXT reward? 
-    // OR was it the one we just contributed to?)
-    // The requirement is "How many responses needed for next reward".
-    // If we just earned a reward, the *next* requirement is valid.
-    // If we didn't, the current requirement is valid.
-    // Let's just return the value at scheduleIndex.
-
     let loggedThreshold = 0;
     if (participant.reinforcementState[taskKey] && participant.reinforcementState[taskKey].schedule) {
         const s = participant.reinforcementState[taskKey];
         if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
-            // If reward was JUST earned, s.scheduleIndex was incremented.
-            // We want the threshold that was just completed (previous index).
+            // If we just advanced (rewardEarned), the threshold that triggered it was index-1
             if (rewardEarned) {
-                // Use index - 1 (safe check > 0 usually true if index just inc)
                 loggedThreshold = Math.pow(2, Math.max(0, s.scheduleIndex - 1));
             } else {
-                // Otherwise use current
                 loggedThreshold = Math.pow(2, s.scheduleIndex);
             }
         } else if (s.schedule.length > 0) {
-            // For VR, similar logic if we want the "just completed" req?
-            // Usually VR req is random. If we moved index, we moved to next req.
-            // If reward earned, we want the one we just did.
             if (rewardEarned) {
                 loggedThreshold = s.schedule[Math.max(0, s.scheduleIndex - 1)] || 0;
             } else {
@@ -238,11 +208,11 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     }
 
     return {
-        rewardEarned: rewardEarned && rewardAmount > 0,
+        rewardEarned: rewardEarned,
         rewardAmount,
         totalEarnings: participant.earnings,
         trialsCompleted: trialsCompleted,
-        currentThreshold: loggedThreshold // New field for logging
+        currentThreshold: loggedThreshold
     };
 };
 
@@ -268,41 +238,54 @@ const startTask = async (participantId, taskType, condition, variant) => {
 
     let trialsCompleted = 0;
 
-    if (isPreTraining) {
-        const variantKey = variant ? `_${variant.toLowerCase().replace(/\s+/g, '')}` : '';
-        const storageKey = `${taskKey}${variantKey}`;
-
-        if (!participant.pre_training_completion) participant.pre_training_completion = new Map();
-        trialsCompleted = participant.pre_training_completion.get(storageKey) || 0;
-    } else {
-        // Main Task
-        if (!participant.reinforcementState) {
-            participant.reinforcementState = {};
-        }
-
-        // Ensure the specific task state exists, specifically for Genuine Execution using base keys
-        if (!participant.reinforcementState[taskKey]) {
-            participant.reinforcementState[taskKey] = {
-                trialsCompleted: 0,
-                correctCount: 0,
-                scheduleIndex: 0,
-                schedule: generateVRSchedule() // Init schedule immediately
-            };
-        }
-
-        const state = participant.reinforcementState[taskKey];
-
-        // Double check schedule exists (if state existed but schedule didn't)
-        if (!state.schedule || state.schedule.length === 0) {
-            state.schedule = generateVRSchedule();
-        }
-
-        // Important: Mark modified if using Mixed type or just to be safe with nested updates
-        participant.markModified('reinforcementState');
-        await participant.save();
-
-        trialsCompleted = state.trialsCompleted;
+    // --- Unified Initialization ---
+    // Make sure we have a container
+    if (!participant.reinforcementState) {
+        participant.reinforcementState = {};
     }
+    if (!participant.pre_training_completion) participant.pre_training_completion = new Map();
+
+    // Ensure the specific task state exists, using base keys
+    if (!participant.reinforcementState[taskKey]) {
+        participant.reinforcementState[taskKey] = {
+            trialsCompleted: 0,
+            correctCount: 0,
+            scheduleIndex: 0,
+            schedule: generateVRSchedule() // Init schedule immediately
+        };
+    }
+
+    const state = participant.reinforcementState[taskKey];
+
+    // Double check schedule exists
+    if (!state.schedule || state.schedule.length === 0) {
+        state.schedule = generateVRSchedule();
+    }
+
+    trialsCompleted = state.trialsCompleted;
+
+    // For Pre-Training, we ALSO want to track 'pre_training_completion' map because
+    // some frontend logic might rely on specific variant counts if it queries `participant.pre_training_completion`?
+    // Actually, startTask returns `trialsCompleted`. If we change the source of truth for Pre-Training to reinforcementState,
+    // we must ensure the frontend receives the correct number.
+    // The previous code returned `participant.pre_training_completion.get(storageKey)` for Pre-Training.
+    // Use the reinforcementState count as the primary source now for consistency with processTrial.
+
+    // However, if the user switches variants in Pre-Training (e.g., 'pr' to 'vr'), reinforcementState[taskKey] might be shared
+    // depending on our key logic.
+    // Key logic in processTrial:
+    // If Pre-Training, taskKey = taskType.toLowerCase() (e.g. "matching").
+    // So "matching" is shared across variants in reinforcementState.
+    // Pre-Training matching variants: 'equations', 'mammals'.
+    // If we want separated counts per variant, we need variant keys.
+    // The previous `processTrial` logic I wrote used `taskKey` which was just `taskType`.
+    // So it SHARES the schedule across variants in Pre-Training.
+    // User requested: "implement same this logic in all tasks of pre-trainning".
+    // Usually schedules are per task type.
+
+    // Save
+    participant.markModified('reinforcementState');
+    await participant.save();
 
     return {
         totalEarnings: participant.earnings,

@@ -9,7 +9,7 @@ export const PreTraining = ({ tasks = [], onComplete, participantId, onOptOut })
     // Flatten approach: We treat each task object as a phase.
     const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
     const [trial, setTrial] = useState(1);
-    const TRIALS_PER_TASK = 15; // As per requirement
+    const TRIALS_PER_TASK = 10; // As per requirement
 
     const currentTask = tasks[currentTaskIndex];
 
@@ -32,6 +32,11 @@ export const PreTraining = ({ tasks = [], onComplete, participantId, onOptOut })
 
     return (
         <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6">
+                <h2 className="text-xl font-bold text-green-900 mb-1">Condition 1</h2>
+                <p className="text-green-700">Please complete the assigned tasks.</p>
+            </div>
+
             <div className="text-center pb-4">
                 <h2 className="text-2xl font-bold text-emerald-900">{currentTask.label}</h2>
                 <p className="text-emerald-700 opacity-80">Pre-Training Phase - {currentTaskIndex + 1} of {tasks.length}</p>

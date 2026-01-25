@@ -140,6 +140,11 @@ const participantSchema = new mongoose.Schema({
         sorting_coercion: { latency: Number, count: Number },
         dragging_coercion: { latency: Number, count: Number }
     },
+    miniSurveys: {
+        genuine: { rating: Number, timestamp: Date },
+        apparent: { rating: Number, timestamp: Date },
+        coercion: { rating: Number, timestamp: Date }
+    },
     postSurvey: {
         instructionsClarity: String, // Was q1
         feltRushed: String,          // Was q2

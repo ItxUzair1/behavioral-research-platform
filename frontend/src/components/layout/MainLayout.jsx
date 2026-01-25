@@ -4,9 +4,9 @@ import { Check } from 'lucide-react';
 const steps = [
     { id: 1, label: 'Consent' },
     { id: 2, label: 'Demographics' },
-    { id: 3, label: 'Genuine Assent' },
-    { id: 4, label: 'Apparent Assent' },
-    { id: 5, label: 'Coercion' },
+    { id: 3, label: 'Condition 1' },
+    { id: 4, label: 'Condition 2' },
+    { id: 5, label: 'Condition 3' },
     { id: 6, label: 'Survey' },
     { id: 7, label: 'Payout' },
 ];

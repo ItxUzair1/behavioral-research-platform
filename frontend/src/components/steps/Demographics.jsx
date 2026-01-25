@@ -13,8 +13,7 @@ export const Demographics = ({ onNext, participantId }) => {
         geographic_region: '',
         education: '', // Kept for backward compatibility if needed, but likely replaced by education_level or mapped
         education_level: '',
-        socioeconomic_status: '',
-        comments: ''
+        socioeconomic_status: ''
     });
 
     const [loading, setLoading] = useState(false);
@@ -76,7 +75,7 @@ export const Demographics = ({ onNext, participantId }) => {
 
                     <Input
                         id="age"
-                        label="Age"
+                        label="What is your age (in years)?"
                         type="number"
                         required
                         value={formData.age}
@@ -102,13 +101,13 @@ export const Demographics = ({ onNext, participantId }) => {
                             htmlFor="gender"
                             className="absolute text-sm text-gray-500 duration-300 transform -translate-y-4 scale-75 top-4 z-10 origin-[0] left-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-gray-900"
                         >
-                            Gender <span className="text-red-500">*</span>
+                            What is your gender? <span className="text-red-500">*</span>
                         </label>
                     </div>
 
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-900">
-                            Race / Ethnicity <span className="text-red-500">*</span>
+                            What race and ethnicity best describe you? <span className="text-red-500">*</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                             {['American Indian or Alaska Native', 'Asian', 'Black or African American', 'Hispanic or Latino', 'Native Hawaiian or Other Pacific Islander', 'White', 'Other', 'Prefer not to say'].map((option) => (
@@ -125,19 +124,11 @@ export const Demographics = ({ onNext, participantId }) => {
                                 </label>
                             ))}
                         </div>
-                        {/* Validation error placeholder if needed, though HTML5 required doesn't work easily on checkboxes group. */}
-                        {/* We might need a manual check on submit for required checkboxes, but keeping simple for now as requested styling implies basic HTML checks? 
-                             The requirement says "Required". Standard HTML checkboxes don't support 'required' on a group well. 
-                             I'll add a check in handleSubmit later if needed, but for now relying on user finding it. 
-                             Wait, I should ensure it's required. I'll add a simple validation in handleSubmit or just rely on the fact the user is meticulous.
-                             Let's add a small text if empty on blur? No, simple is better.
-                             I will update styling to match.
-                         */}
                     </div>
 
                     <Input
                         id="geographic_region"
-                        label="State / Country / Territory where you live"
+                        label="Please specify the geographic region where you live (state/country/territory)?"
                         required
                         value={formData.geographic_region}
                         onChange={handleChange}
@@ -169,10 +160,10 @@ export const Demographics = ({ onNext, participantId }) => {
 
                     <div className="space-y-3">
                         <label className="block text-sm font-medium text-gray-900">
-                            Socio-Economic Status <span className="text-red-500">*</span>
+                            Please state your socioeconomic status <span className="text-red-500">*</span>
                         </label>
                         <div className="space-y-2">
-                            {['High class', 'Middle class', 'Low class', 'Prefer not to say'].map((option) => (
+                            {['Low class', 'Middle class', 'High class', 'Prefer not to say'].map((option) => (
                                 <label key={option} className="flex items-center space-x-2">
                                     <input
                                         type="radio"
@@ -189,13 +180,6 @@ export const Demographics = ({ onNext, participantId }) => {
                             ))}
                         </div>
                     </div>
-
-                    <Input
-                        id="comments"
-                        label="Additional Comments (Optional)"
-                        value={formData.comments}
-                        onChange={handleChange}
-                    />
 
                     <div className="pt-4 flex justify-between items-center">
                         <span className="text-xs text-gray-400 font-mono">ID: {participantId}</span>

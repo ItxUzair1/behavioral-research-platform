@@ -36,7 +36,7 @@ const TASK_CONFIG = {
         icon: ArrowLeftRight
     },
     dragging: {
-        title: "Variable Ratio Schedule",
+        title: "dragging",
         description: "Drag the square target to the destination to earn rewards.",
         theme: {
             bg: 'bg-orange-50',

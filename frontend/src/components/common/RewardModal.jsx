@@ -5,7 +5,7 @@ export const RewardModal = ({ amount, onDismiss }) => {
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/10 backdrop-blur-[1px]">
             <div className="bg-[#4ADE80] border-4 border-black p-8 w-[400px] text-center shadow-2xl animate-in zoom-in duration-200">
                 <p className="font-serif text-xl mb-6 text-black font-medium leading-tight">
-                    You have earned ${amount.toFixed(2)}!<br />Click "ok" to continue
+                    You have earned some money!<br />Click "ok" to continue
                 </p>
                 <button
                     onClick={onDismiss}

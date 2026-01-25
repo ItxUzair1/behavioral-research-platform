@@ -15,21 +15,38 @@ const MAMMALS = [
     { name: "Tiger", id: "tiger" },
     { name: "Bear", id: "bear" },
     { name: "Elephant", id: "elephant" },
-    { name: "Whale", id: "whale" }
+    { name: "Whale", id: "whale" },
+    { name: "Monkey", id: "monkey" },
+    { name: "Giraffe", id: "giraffe" },
+    { name: "Zebra", id: "zebra" },
+    { name: "Kangaroo", id: "kangaroo" },
+    { name: "Panda", id: "panda" },
+    { name: "Dolphin", id: "dolphin" },
+    { name: "Wolf", id: "wolf" }
 ];
 const BIRDS = [
     { name: "Eagle", id: "eagle" },
     { name: "Parrot", id: "parrot" },
     { name: "Penguin", id: "penguin" },
     { name: "Owl", id: "owl" },
-    { name: "Duck", id: "duck" }
+    { name: "Duck", id: "duck" },
+    { name: "Flamingo", id: "flamingo" },
+    { name: "Peacock", id: "peacock" },
+    { name: "Swan", id: "swan" },
+    { name: "Sparrow", id: "sparrow" },
+    { name: "Hawk", id: "hawk" }
 ];
 const REPTILES = [
     { name: "Snake", id: "snake" },
     { name: "Lizard", id: "lizard" },
     { name: "Crocodile", id: "crocodile" },
     { name: "Turtle", id: "turtle" },
-    { name: "Chameleon", id: "chameleon" }
+    { name: "Chameleon", id: "chameleon" },
+    { name: "Iguana", id: "iguana" },
+    { name: "Gecko", id: "gecko" },
+    { name: "Alligator", id: "alligator" },
+    { name: "Komodo", id: "komodo" },
+    { name: "Python", id: "python" }
 ];
 
 const NON_MAMMALS = [...BIRDS, ...REPTILES];
@@ -138,9 +155,18 @@ exports.getStimulus = async (req, res) => {
                 // Assuming any item can be dragged to its corresponding bin.
 
                 const opts = [];
-                for (let i = 0; i < 3; i++) {
+                const usedLetters = new Set();
+
+                let safety = 0;
+                while (opts.length < 3 && safety < 50) {
+                    safety++;
                     const cat = categories[randomInt(0, 2)];
-                    opts.push({ text: getLetter(cat), category: cat });
+                    const letter = getLetter(cat);
+
+                    if (!usedLetters.has(letter)) {
+                        usedLetters.add(letter);
+                        opts.push({ text: letter, category: cat });
+                    }
                 }
 
                 data = {
@@ -152,17 +178,46 @@ exports.getStimulus = async (req, res) => {
             } else if (variant === 'syllables') {
                 const categories = ["1 Syllable", "2 Syllables", "3 Syllables"];
                 const wordMap = {
-                    "1 Syllable": ["Cat", "Dog", "Sun", "Moon", "Fish"],
-                    "2 Syllables": ["Paper", "Water", "Apple", "Table", "Happy"],
-                    "3 Syllables": ["Elephant", "Banana", "Computer", "Radio", "Camera"]
+                    "1 Syllable": [
+                        "Cat", "Dog", "Sun", "Moon", "Fish",
+                        "Hat", "Ball", "Cup", "Tree", "Car",
+                        "Book", "Pen", "Door", "Bird", "Cloud",
+                        "Sky", "Rain", "Snow", "Wind", "Star",
+                        "Key", "Lock", "Shoe", "Sock", "Bag"
+                    ],
+                    "2 Syllables": [
+                        "Paper", "Water", "Apple", "Table", "Happy",
+                        "Tiger", "Pencil", "Window", "Flower", "Garden",
+                        "Doctor", "Teacher", "Sister", "Brother", "Pocket",
+                        "Rabbit", "Monkey", "Lion", "Zebra", "Pizza",
+                        "Cookie", "Candy", "Balloon", "Party", "Music"
+                    ],
+                    "3 Syllables": [
+                        "Elephant", "Banana", "Computer", "Radio", "Camera",
+                        "Umbrella", "Tomato", "Potato", "Hospital", "Library",
+                        "Octopus", "Butterfly", "Galaxy", "Telephone", "Energy",
+                        "Strawberry", "Pineapple", "Dinosaur", "Basketball", "Violin",
+                        "Video", "Calendar", "Envelope", "Bicycle", "Vacation"
+                    ]
                 };
 
                 const getWord = (cat) => wordMap[cat][randomInt(0, wordMap[cat].length - 1)];
 
                 const opts = [];
-                for (let i = 0; i < 3; i++) {
+                const usedWords = new Set();
+
+                // Attempt to fill 3 distinct options
+                // Safety counter to prevent infinite loop (though unlikely with large lists)
+                let safety = 0;
+                while (opts.length < 3 && safety < 50) {
+                    safety++;
                     const cat = categories[randomInt(0, 2)];
-                    opts.push({ text: getWord(cat), category: cat });
+                    const word = getWord(cat);
+
+                    if (!usedWords.has(word)) {
+                        usedWords.add(word);
+                        opts.push({ text: word, category: cat });
+                    }
                 }
 
                 data = {
