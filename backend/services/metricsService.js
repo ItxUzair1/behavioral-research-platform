@@ -1,4 +1,5 @@
 const TrialLog = require('../models/TrialLog');
+const Participant = require('../models/Participant');
 
 /**
  * Calculates trial metrics for a participant.
@@ -182,6 +183,19 @@ exports.calculateMetrics = async (participantId) => {
             if (m.startTime) m.startTime = new Date(m.startTime).toISOString();
             if (m.endTime) m.endTime = new Date(m.endTime).toISOString();
         });
+
+        // Fetch Participant for Survey Data
+        const participant = await Participant.findOne({ participantId });
+        if (participant && participant.postSurvey) {
+            metrics['post_survey'] = {
+                preferenceRanking: participant.postSurvey.preferenceRanking ? participant.postSurvey.preferenceRanking.join(' > ') : 'N/A',
+                demandRanking: participant.postSurvey.demandRanking ? participant.postSurvey.demandRanking.join(' > ') : 'N/A',
+                senseOfControl: participant.postSurvey.senseOfControl || 'N/A',
+                emotional_genuine: participant.postSurvey.emotionalResponse?.genuine ?? 'N/A',
+                emotional_apparent: participant.postSurvey.emotionalResponse?.apparent ?? 'N/A',
+                emotional_coercion: participant.postSurvey.emotionalResponse?.coercion ?? 'N/A'
+            };
+        }
 
         return metrics;
 

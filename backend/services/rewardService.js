@@ -61,25 +61,14 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
 
     // Determine the key for reinforcementState
     if (isPreTraining) {
-        // For Pre-Training, we now also use unique keys in reinforcementState to track schedules
-        // We use the same suffix logic or just base keys if we want to reuse schedules?
-        // User wants "same logic", implying standard VR/PR.
-        // Let's use separate keys for Pre-Training to avoid messing up Main Task schedules if they ever overlap?
-        // Actually, Pre-Training is separate. Let's use specific keys to be safe and clean.
-        // "matching_genuine", "sorting_genuine", "dragging_genuine"?
-        // Or if the condition is "Genuine Assent", we can map it.
-
-        // Wait, the participant schema has "matching", "sorting", "dragging" as generic/legacy.
-        // Let's use those for Pre-Training (Genuine), or explicit "genuine" keys if schema supports.
-        // Schema has `matching_genuine` in `earningsByTask` but NOT in `reinforcementState`.
-        // Schema has `matching` (legacy).
-        // Let's use the BASE keys (`matching`, `sorting`, `dragging`) for Pre-Training/Genuine phase
-        // and the suffixed keys (`matching_apparent`) for others.
-        // This aligns with how `startTask` was setting up `matching_apparent`.
+        // ... (existing pre-training logic if any, but currently I rely on block below)
     } else {
-        // Apparent or Coercion
+        // Apparent or Coercion OR Genuine Execution
         if (lowerCond.includes('apparent')) taskKey += '_apparent';
         else if (lowerCond.includes('coercion')) taskKey += '_coercion';
+        else if (isGenuineExecution && taskKey === 'dragging' && variant === 'pr') {
+            taskKey = 'dragging_genuine_pr';
+        }
     }
 
     let rewardEarned = false;
@@ -92,6 +81,14 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     if (!participant.reinforcementState) {
         participant.reinforcementState = {};
     }
+
+    // Special handling for Dragging in Pre-Training to separate PR and VR schedules
+    if (isPreTraining && taskKey === 'dragging') {
+        if (variant === 'pr') {
+            taskKey = 'dragging_pr';
+        }
+    }
+
     if (!participant.reinforcementState[taskKey]) {
         participant.reinforcementState[taskKey] = {
             trialsCompleted: 0,
@@ -100,6 +97,7 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
             schedule: generateVRSchedule()
         };
     }
+
 
     const state = participant.reinforcementState[taskKey];
 
@@ -234,6 +232,9 @@ const startTask = async (participantId, taskType, condition, variant) => {
         const suffix = condition.toLowerCase();
         if (suffix.includes('apparent')) taskKey += '_apparent';
         else if (suffix.includes('coercion')) taskKey += '_coercion';
+        else if (isGenuineExecution && taskKey === 'dragging' && variant === 'pr') {
+            taskKey = 'dragging_genuine_pr';
+        }
     }
 
     let trialsCompleted = 0;
@@ -246,6 +247,13 @@ const startTask = async (participantId, taskType, condition, variant) => {
     if (!participant.pre_training_completion) participant.pre_training_completion = new Map();
 
     // Ensure the specific task state exists, using base keys
+    // Special handling for Dragging in Pre-Training to separate PR and VR schedules
+    if (isPreTraining && taskKey === 'dragging') {
+        if (variant === 'pr') {
+            taskKey = 'dragging_pr';
+        }
+    }
+
     if (!participant.reinforcementState[taskKey]) {
         participant.reinforcementState[taskKey] = {
             trialsCompleted: 0,
@@ -254,6 +262,7 @@ const startTask = async (participantId, taskType, condition, variant) => {
             schedule: generateVRSchedule() // Init schedule immediately
         };
     }
+
 
     const state = participant.reinforcementState[taskKey];
 

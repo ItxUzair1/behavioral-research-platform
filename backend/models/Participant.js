@@ -112,6 +112,18 @@ const participantSchema = new mongoose.Schema({
             scheduleIndex: { type: Number, default: 0 },
             correctCount: { type: Number, default: 0 },
             trialsCompleted: { type: Number, default: 0 }
+        },
+        dragging_pr: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        dragging_genuine_pr: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
         }
     },
     earningsByTask: {
@@ -146,9 +158,14 @@ const participantSchema = new mongoose.Schema({
         coercion: { rating: Number, timestamp: Date }
     },
     postSurvey: {
-        instructionsClarity: String, // Was q1
-        feltRushed: String,          // Was q2
-        feedback: String,            // Was q3
+        preferenceRanking: [String], // e.g. ["Green (Genuine)", "Purple (Apparent)", "Orange (Coercion)"]
+        demandRanking: [String],
+        senseOfControl: String,
+        emotionalResponse: {
+            genuine: Number, // 0-100
+            apparent: Number,
+            coercion: Number
+        },
         timestamp: Date
     },
     timestamps: {

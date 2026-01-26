@@ -1,22 +1,53 @@
 import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { ClipboardList, Send } from 'lucide-react';
+import { Send, Trophy, BarChart, Activity, Heart } from 'lucide-react';
 import { api } from '../../services/api';
+
+const CONDITIONS = [
+    { id: 'Genuine', label: 'Green Arrangement (Genuine)', color: 'bg-green-100 border-green-500', iconColor: 'text-green-600' },
+    { id: 'Apparent', label: 'Purple Arrangement (Apparent)', color: 'bg-purple-100 border-purple-500', iconColor: 'text-purple-600' },
+    { id: 'Coercion', label: 'Orange Arrangement (Coercion)', color: 'bg-orange-100 border-orange-500', iconColor: 'text-orange-600' }
+];
 
 export const PostSurvey = ({ onNext, participantId }) => {
     const [loading, setLoading] = useState(false);
-    const [responses, setResponses] = useState({
-        instructionsClarity: "",
-        feltRushed: "",
-        feedback: ""
+
+    // State for questions
+    const [preferenceRanking, setPreferenceRanking] = useState([...CONDITIONS]);
+    const [demandRanking, setDemandRanking] = useState([...CONDITIONS]);
+    const [controlChoice, setControlChoice] = useState(null);
+    const [emotions, setEmotions] = useState({
+        Genuine: 50,
+        Apparent: 50,
+        Coercion: 50
     });
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setResponses(prev => ({ ...prev, [name]: value }));
+    // --- Drag and Drop Logic ---
+    const handleDragStart = (e, index, listType) => {
+        e.dataTransfer.setData('sourceIndex', index);
+        e.dataTransfer.setData('listType', listType);
     };
 
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e, dropIndex, listType, listData, setList) => {
+        e.preventDefault();
+        const sourceIndex = parseInt(e.dataTransfer.getData('sourceIndex'));
+        const sourceList = e.dataTransfer.getData('listType');
+
+        if (sourceList !== listType) return;
+        if (sourceIndex === dropIndex) return;
+
+        const newList = [...listData];
+        const [movedItem] = newList.splice(sourceIndex, 1);
+        newList.splice(dropIndex, 0, movedItem);
+        setList(newList);
+    };
+
+    // --- Submission ---
     const handleSubmit = async () => {
         if (!participantId) {
             console.error("No participant ID found");
@@ -24,127 +55,165 @@ export const PostSurvey = ({ onNext, participantId }) => {
             return;
         }
 
+        if (!controlChoice) {
+            alert("Please select the arrangement where you felt the most control.");
+            return;
+        }
+
         setLoading(true);
         try {
-            await api.updateParticipant(participantId, {
+            const payload = {
                 postSurvey: {
-                    ...responses,
+                    preferenceRanking: preferenceRanking.map(c => c.label),
+                    demandRanking: demandRanking.map(c => c.label),
+                    senseOfControl: controlChoice,
+                    emotionalResponse: {
+                        genuine: emotions.Genuine,
+                        apparent: emotions.Apparent,
+                        coercion: emotions.Coercion
+                    },
                     timestamp: new Date()
                 }
-            });
+            };
+
+            await api.updateParticipant(participantId, payload);
             onNext();
         } catch (error) {
             console.error("Failed to submit survey:", error);
-            // Optional: Show error to user, but for now we might just proceed or alert
             alert("Failed to save responses. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
+    // --- Render Helpers ---
+    const renderDraggableList = (items, setItems, listType) => (
+        <div className="space-y-2">
+            {items.map((item, index) => (
+                <div
+                    key={item.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index, listType)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, index, listType, items, setItems)}
+                    className={`p-4 border-2 rounded-lg cursor-grab active:cursor-grabbing shadow-sm flex items-center gap-4 transition-all hover:shadow-md ${item.color}`}
+                >
+                    <span className="font-bold text-gray-500 text-lg w-8 h-8 flex items-center justify-center bg-white rounded-full border border-gray-300">
+                        {index + 1}
+                    </span>
+                    <span className="font-medium text-gray-800">{item.label}</span>
+                </div>
+            ))}
+            <p className="text-xs text-gray-400 text-center italic mt-2">Drag items to reorder</p>
+        </div>
+    );
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 max-w-2xl mx-auto pb-12">
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900">Post-Study Survey</h1>
-                <p className="text-gray-500">Please answer a few final questions about your experience.</p>
+                <p className="text-gray-500">Please answer the following questions about your experience.</p>
             </div>
 
+            {/* 1. Preference Ranking */}
             <Card>
                 <div className="flex items-center gap-2 text-gray-900 font-semibold border-b border-gray-100 pb-4 mb-6">
-                    <ClipboardList className="w-5 h-5" />
-                    <span>Participant Feedback</span>
+                    <Heart className="w-5 h-5 text-red-500" />
+                    <span>1. Preference Ranking</span>
                 </div>
+                <p className="mb-4 text-sm text-gray-600">
+                    Rank the three arrangements from <strong>Most Preferred</strong> (top) to <strong>Least Preferred</strong> (bottom).
+                </p>
+                {renderDraggableList(preferenceRanking, setPreferenceRanking, 'preference')}
+            </Card>
 
-                <div className="space-y-8">
-                    {/* Question 1 */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-gray-900">
-                            1. How clear were the instructions provided during the tasks?
-                        </label>
-                        <div className="flex justify-between gap-2">
-                            {[1, 2, 3, 4, 5].map((val) => (
-                                <label key={val} className="flex-1">
-                                    <input
-                                        type="radio"
-                                        name="instructionsClarity"
-                                        value={val}
-                                        checked={responses.instructionsClarity === String(val)}
-                                        onChange={handleChange}
-                                        className="peer sr-only"
-                                    />
-                                    <div className="h-10 rounded-lg border border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50 peer-checked:bg-gray-900 peer-checked:text-white peer-checked:border-gray-900 transition-all">
-                                        {val}
-                                    </div>
-                                    <span className="block text-[10px] text-center mt-1 text-gray-400 peer-checked:text-gray-900">
-                                        {val === 1 ? 'Unclear' : val === 5 ? 'Very Clear' : ''}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
+            {/* 2. Perceived Demand Ranking */}
+            <Card>
+                <div className="flex items-center gap-2 text-gray-900 font-semibold border-b border-gray-100 pb-4 mb-6">
+                    <BarChart className="w-5 h-5 text-blue-500" />
+                    <span>2. Perceived Difficulty Ranking</span>
+                </div>
+                <p className="mb-4 text-sm text-gray-600">
+                    Rank the three arrangements from <strong>Easiest / Least Demanding</strong> (top) to <strong>Hardest / Most Demanding</strong> (bottom).
+                </p>
+                {renderDraggableList(demandRanking, setDemandRanking, 'demand')}
+            </Card>
 
-                    {/* Question 2 */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-gray-900">
-                            2. Did you feel rushed while making your decisions?
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <label className="cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="feltRushed"
-                                    value="Yes"
-                                    checked={responses.feltRushed === "Yes"}
-                                    onChange={handleChange}
-                                    className="peer sr-only"
-                                />
-                                <div className="p-3 border border-gray-200 rounded-xl text-center hover:bg-gray-50 peer-checked:border-gray-900 peer-checked:bg-gray-50 peer-checked:ring-1 peer-checked:ring-gray-900 transition-all">
-                                    Yes
-                                </div>
-                            </label>
-                            <label className="cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="feltRushed"
-                                    value="No"
-                                    checked={responses.feltRushed === "No"}
-                                    onChange={handleChange}
-                                    className="peer sr-only"
-                                />
-                                <div className="p-3 border border-gray-200 rounded-xl text-center hover:bg-gray-50 peer-checked:border-gray-900 peer-checked:bg-gray-50 peer-checked:ring-1 peer-checked:ring-gray-900 transition-all">
-                                    No
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Question 3 */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-gray-900">
-                            3. Any additional feedback? (Optional)
-                        </label>
-                        <textarea
-                            name="feedback"
-                            value={responses.feedback}
-                            onChange={handleChange}
-                            rows={4}
-                            className="w-full border border-gray-200 rounded-xl p-4 text-sm focus:outline-none focus:border-gray-900 focus:ring-0 resize-none"
-                            placeholder="Type your response here..."
-                        />
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-100 flex justify-end">
-                        <Button onClick={handleSubmit} disabled={loading} className="w-full md:w-auto">
-                            {loading ? 'Submitting...' : (
-                                <>
-                                    Submit Responses
-                                    <Send className="w-4 h-4 ml-2" />
-                                </>
-                            )}
-                        </Button>
-                    </div>
+            {/* 3. Sense of Control */}
+            <Card>
+                <div className="flex items-center gap-2 text-gray-900 font-semibold border-b border-gray-100 pb-4 mb-6">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    <span>3. Sense of Control</span>
+                </div>
+                <p className="mb-4 text-sm text-gray-600">
+                    In which arrangement did you feel the <strong>most control</strong> over whether to continue?
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {CONDITIONS.map((cond) => (
+                        <button
+                            key={cond.id}
+                            onClick={() => setControlChoice(cond.label)}
+                            className={`p-4 border-2 rounded-xl text-center transition-all ${controlChoice === cond.label
+                                    ? 'ring-4 ring-offset-2 ring-blue-400 border-blue-600 bg-blue-50 scale-105'
+                                    : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                }`}
+                        >
+                            <div className={`w-full h-12 mb-2 rounded ${cond.color}`}></div>
+                            <span className="font-medium text-sm text-gray-800">{cond.label}</span>
+                        </button>
+                    ))}
                 </div>
             </Card>
+
+            {/* 4. Emotional Response Sliders */}
+            <Card>
+                <div className="flex items-center gap-2 text-gray-900 font-semibold border-b border-gray-100 pb-4 mb-6">
+                    <Activity className="w-5 h-5 text-pink-500" />
+                    <span>4. Emotional Response</span>
+                </div>
+                <p className="mb-6 text-sm text-gray-600">
+                    For each arrangement, how did you feel?
+                    <br />
+                    <span className="text-xs text-gray-500">(0 = Discouraged/Stressed, 100 = Confident/Relaxed)</span>
+                </p>
+
+                <div className="space-y-8">
+                    {CONDITIONS.map((cond) => (
+                        <div key={cond.id} className="space-y-2">
+                            <label className="flex justify-between items-center text-sm font-medium text-gray-800">
+                                <span>{cond.label}</span>
+                                <span className={`font-mono font-bold ${cond.iconColor}`}>{emotions[cond.id]}</span>
+                            </label>
+                            <div className={`p-4 rounded-lg bg-gray-50 border border-gray-100 ${cond.color.split(' ')[0]}`}>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={emotions[cond.id]}
+                                    onChange={(e) => setEmotions(prev => ({ ...prev, [cond.id]: parseInt(e.target.value) }))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-800"
+                                />
+                                <div className="flex justify-between text-[10px] text-gray-500 mt-1 uppercase tracking-wider font-bold">
+                                    <span>Stressed</span>
+                                    <span>Neutral</span>
+                                    <span>Relaxed</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
+            <div className="pt-4 flex justify-end">
+                <Button onClick={handleSubmit} disabled={loading} className="w-full md:w-auto text-lg py-3 px-8">
+                    {loading ? 'Submitting...' : (
+                        <>
+                            Submit Survey
+                            <Send className="w-5 h-5 ml-2" />
+                        </>
+                    )}
+                </Button>
+            </div>
         </div>
     );
 };
