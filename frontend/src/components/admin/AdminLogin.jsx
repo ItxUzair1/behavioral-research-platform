@@ -23,7 +23,10 @@ export const AdminLogin = ({ onLogin }) => {
 
             const res = await fetch(`${API_BASE_URL}/admin/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
                 body: JSON.stringify({ password })
             });
             const data = await res.json();

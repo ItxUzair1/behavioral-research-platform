@@ -14,7 +14,10 @@ export const AdminDashboard = ({ token, onLogout }) => {
     const fetchParticipants = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/admin/participants`, {
-                headers: { 'x-admin-auth': token }
+                headers: {
+                    'x-admin-auth': token,
+                    'ngrok-skip-browser-warning': 'true'
+                }
             });
             const data = await res.json();
             if (data.success) {
@@ -49,7 +52,10 @@ export const AdminDashboard = ({ token, onLogout }) => {
     const downloadWithAuth = async (url, filename) => {
         try {
             const res = await fetch(url, {
-                headers: { 'x-admin-auth': token }
+                headers: {
+                    'x-admin-auth': token,
+                    'ngrok-skip-browser-warning': 'true'
+                }
             });
             if (!res.ok) throw new Error("Download failed");
             const blob = await res.blob();
