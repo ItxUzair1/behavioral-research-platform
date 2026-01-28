@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { RewardModal } from '../common/RewardModal';
 import { playTrialCompleteSound } from '../../utils/audio';
 
 export const SortingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [stimulus, setStimulus] = useState(null);
-    const [nextStimulus, setNextStimulus] = useState(null); // Buffer
     const [loading, setLoading] = useState(true);
     const [earnings, setEarnings] = useState(0);
     const [internalTrialCount, setInternalTrialCount] = useState(0);
@@ -19,28 +18,37 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     const displayTrial = currentTrial || internalTrialCount;
     const displayMax = totalTrials || (isPreTraining ? 10 : 200);
 
+    // Queue State
+    const stimulusQueue = useRef([]);
+
     // Show earnings if NOT Pre-Training
     const showEarnings = !isPreTraining;
 
-    const fetchStimulusData = async () => {
+    const fetchStimulusBatch = async (count = 5) => {
         try {
-            const res = await api.getStimulus('sorting', variant);
-            if (res.success) return res.data;
+            const res = await api.getStimulus('sorting', variant, count);
+            if (res.success) {
+                const newItems = Array.isArray(res.data) ? res.data : [res.data];
+                return newItems;
+            }
         } catch (err) {
             console.error(err);
         }
-        return null;
+        return [];
     };
 
     const initTask = async () => {
         setLoading(true);
         try {
-            const currentData = await fetchStimulusData();
-            if (currentData) setStimulus(currentData);
+            // 1. Initial Batch Fetch (5 Items)
+            const initialBatch = await fetchStimulusBatch(5);
+            stimulusQueue.current = initialBatch;
 
-            const nextData = await fetchStimulusData();
-            if (nextData) setNextStimulus(nextData);
+            if (stimulusQueue.current.length > 0) {
+                setStimulus(stimulusQueue.current.shift());
+            }
 
+            // 2. Start Task API
             const startRes = await api.startTask(participantId, 'sorting', phase, variant);
             if (startRes.success) {
                 setEarnings(startRes.data.totalEarnings);
@@ -58,21 +66,10 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     }, [variant]);
 
     const handleDrop = async (item, targetCategory, targetIndex) => {
-        // Validation handled by backend or frontend check?
-        // Sorting usually checks category matching.
-        // Assuming stimulus.options has the category.
-
-        // Find the item in options to verify category? 
-        // Logic depends on how drag/drop is implemented.
-        // Reading the code below: 
-        // <div ... onDrop={() => handleDrop(opt, target)} ... >
-        // It seems 'opt' is the draggable item.
-
         const isCorrect = item.category === targetCategory;
         const selectedOptionLabel = `Bin ${targetIndex + 1}`;
         const rt = Math.floor(Math.random() * 500 + 500);
 
-        // Submit to backend FIRST
         try {
             const res = await api.submitTaskResult({
                 participantId,
@@ -84,51 +81,48 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             });
 
             if (res.success) {
-                // Play success sound
                 playTrialCompleteSound();
-
                 setInternalTrialCount(res.trialsCompleted);
-
-                // Log with authoritative data
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
                     reward: res.reward,
                     currentThreshold: res.currentThreshold
                 });
 
-                // Handle Reward Modal - Show regardless of phase if triggered
                 if (res.reward) {
                     setRewardData({ amount: res.amount });
                 } else {
-                    setTimeout(advanceStimulus, 500);
+                    setTimeout(advanceStimulus, 200); // reduced delay
                 }
 
-                // Handle Earnings Display
-                if (showEarnings) {
-                    setEarnings(res.totalEarnings);
-                }
+                if (showEarnings) setEarnings(res.totalEarnings);
             }
         } catch (err) {
             console.error(err);
-            // Fallback
             onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
-            setTimeout(advanceStimulus, 500);
+            setTimeout(advanceStimulus, 200);
         }
     };
 
     const advanceStimulus = async () => {
-        if (nextStimulus) {
-            setStimulus(nextStimulus);
-            setNextStimulus(null);
-            const data = await fetchStimulusData();
-            if (data) setNextStimulus(data);
+        // Instant Next
+        if (stimulusQueue.current.length > 0) {
+            setStimulus(stimulusQueue.current.shift());
         } else {
+            // Emergency fetch
             setLoading(true);
-            const data = await fetchStimulusData();
-            if (data) setStimulus(data);
+            const batch = await fetchStimulusBatch(3);
+            if (batch.length > 0) {
+                stimulusQueue.current = batch;
+                setStimulus(stimulusQueue.current.shift());
+            }
             setLoading(false);
+        }
 
-            const next = await fetchStimulusData();
-            if (next) setNextStimulus(next);
+        // Background Refill
+        if (stimulusQueue.current.length < 3) {
+            fetchStimulusBatch(5).then(newItems => {
+                stimulusQueue.current = [...stimulusQueue.current, ...newItems];
+            });
         }
     };
 
