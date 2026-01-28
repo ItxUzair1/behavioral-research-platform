@@ -11,42 +11,42 @@ const EQUATIONS = [
     { q: "5 * 2", a: "10" }, { q: "12 / 3", a: "4" }, { q: "7 + 6", a: "13" }
 ];
 const MAMMALS = [
-    { name: "Lion", id: "lion" },
-    { name: "Tiger", id: "tiger" },
-    { name: "Bear", id: "bear" },
-    { name: "Elephant", id: "elephant" },
-    { name: "Whale", id: "whale" },
-    { name: "Monkey", id: "monkey" },
-    { name: "Giraffe", id: "giraffe" },
-    { name: "Zebra", id: "zebra" },
-    { name: "Kangaroo", id: "kangaroo" },
-    { name: "Panda", id: "panda" },
-    { name: "Dolphin", id: "dolphin" },
-    { name: "Wolf", id: "wolf" }
+    { name: "Lion", id: "lion", ext: ".png" },
+    { name: "Tiger", id: "tiger", ext: ".png" },
+    { name: "Bear", id: "bear", ext: ".jfif" },
+    { name: "Elephant", id: "elephant", ext: ".jfif" },
+    { name: "Whale", id: "whale", ext: ".jfif" },
+    { name: "Monkey", id: "monkey", ext: ".jfif" },
+    { name: "Giraffe", id: "giraffe", ext: ".jfif" },
+    { name: "Zebra", id: "zebra", ext: ".jfif" },
+    { name: "Kangaroo", id: "kangaroo", ext: ".jfif" },
+    { name: "Panda", id: "panda", ext: ".jfif" },
+    { name: "Dolphin", id: "dolphin", ext: ".jfif" },
+    { name: "Wolf", id: "wolf", ext: ".jfif" }
 ];
 const BIRDS = [
-    { name: "Eagle", id: "eagle" },
-    { name: "Parrot", id: "parrot" },
-    { name: "Penguin", id: "penguin" },
-    { name: "Owl", id: "owl" },
-    { name: "Duck", id: "duck" },
-    { name: "Flamingo", id: "flamingo" },
-    { name: "Peacock", id: "peacock" },
-    { name: "Swan", id: "swan" },
-    { name: "Sparrow", id: "sparrow" },
-    { name: "Hawk", id: "hawk" }
+    { name: "Eagle", id: "eagle", ext: ".jfif" },
+    { name: "Parrot", id: "parrot", ext: ".jfif" },
+    { name: "Penguin", id: "penguin", ext: ".jfif" },
+    { name: "Owl", id: "owl", ext: ".jfif" },
+    { name: "Duck", id: "duck", ext: ".jfif" },
+    { name: "Flamingo", id: "flamingo", ext: ".jfif" },
+    { name: "Peacock", id: "peacock", ext: ".jfif" },
+    { name: "Swan", id: "swan", ext: ".jfif" },
+    { name: "Sparrow", id: "sparrow", ext: ".jfif" },
+    { name: "Hawk", id: "hawk", ext: ".jfif" }
 ];
 const REPTILES = [
-    { name: "Snake", id: "snake" },
-    { name: "Lizard", id: "lizard" },
-    { name: "Crocodile", id: "crocodile" },
-    { name: "Turtle", id: "turtle" },
-    { name: "Chameleon", id: "chameleon" },
-    { name: "Iguana", id: "iguana" },
-    { name: "Gecko", id: "gecko" },
-    { name: "Alligator", id: "alligator" },
-    { name: "Komodo", id: "komodo" },
-    { name: "Python", id: "python" }
+    { name: "Snake", id: "snake", ext: ".jfif" },
+    { name: "Lizard", id: "lizard", ext: ".jfif" },
+    { name: "Crocodile", id: "crocodile", ext: ".jfif" },
+    { name: "Turtle", id: "turtle", ext: ".jfif" },
+    { name: "Chameleon", id: "chameleon", ext: ".jfif" },
+    { name: "Iguana", id: "iguana", ext: ".jfif" },
+    { name: "Gecko", id: "gecko", ext: ".jfif" },
+    { name: "Alligator", id: "alligator", ext: ".jfif" },
+    { name: "Komodo", id: "komodo", ext: ".jfif" },
+    { name: "Python", id: "python", ext: ".jfif" }
 ];
 
 const NON_MAMMALS = [...BIRDS, ...REPTILES];

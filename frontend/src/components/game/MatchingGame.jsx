@@ -35,13 +35,19 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
     const preloadImages = (stim) => {
         if (!stim || !stim.options) return;
-        const extensions = ['.png', '.jpg', '.jpeg', '.jfif'];
         stim.options.forEach(opt => {
             if (typeof opt === 'object' && opt.id) {
-                extensions.forEach(ext => {
+                if (opt.ext) {
                     const img = new Image();
-                    img.src = `/images/${opt.id}${ext}`;
-                });
+                    img.src = `/images/${opt.id}${opt.ext}`;
+                } else {
+                    // Fallback to old behavior if ext missing (shouldn't happen for animals)
+                    const extensions = ['.png', '.jpg', '.jpeg', '.jfif'];
+                    extensions.forEach(ext => {
+                        const img = new Image();
+                        img.src = `/images/${opt.id}${ext}`;
+                    });
+                }
             }
         });
     };
@@ -228,6 +234,7 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                                     <ImageWithFallback
                                         basePath={`/images/${opt.id}`}
                                         alt={opt.name}
+                                        extension={opt.ext}
                                     />
                                 ) : (
                                     <span className="text-sm md:text-2xl font-serif">{displayValue}</span>
@@ -262,9 +269,14 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 };
 
 // Helper Component for retrying extensions
-const ImageWithFallback = ({ basePath, alt }) => {
-    // Tries: .png -> .jpg -> .jpeg -> .jfif -> fallback text
-    const extensions = ['.png', '.jpg', '.jpeg', '.jfif'];
+const ImageWithFallback = ({ basePath, alt, extension }) => {
+    // Tries: provided extension -> .png -> .jpg -> .jpeg -> .jfif -> fallback text
+    const defaultExtensions = ['.png', '.jpg', '.jpeg', '.jfif'];
+    // If extension is provided, try that first. If it fails (unlikely), try others? 
+    // Actually if extension is provided we should trust it to avoid 404s.
+    // But for robustness, we can put it first in the list.
+    const extensions = extension ? [extension] : defaultExtensions;
+
     const [extIndex, setExtIndex] = React.useState(0);
     const [failed, setFailed] = React.useState(false);
 
