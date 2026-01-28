@@ -64,7 +64,7 @@ function getParticipantSummary(p, metrics) {
         'gender': p.demographics?.gender || '',
         'race': safeJoin(p.demographics?.race_ethnicity),
         'region': p.demographics?.geographic_region || '',
-        'education': p.demographics?.education || '',  // Field from example request (empty string)
+
         'edu_level': p.demographics?.education_level || '',
         'socio_status': p.demographics?.socioeconomic_status || '',
 
@@ -137,8 +137,7 @@ function getParticipantSummary(p, metrics) {
         'postSurvey_senseOfControl': p.postSurvey?.senseOfControl || '',
         'postSurvey_timestamp': safeDate(p.postSurvey?.timestamp),
 
-        // Pre-Training Completion (map to string)
-        'pre_training_completion': JSON.stringify(p.pre_training_completion || {})
+
     };
 
     // Flatten Metrics
