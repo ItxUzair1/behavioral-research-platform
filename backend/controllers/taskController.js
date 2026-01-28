@@ -69,172 +69,163 @@ const SYLLABLES = [
 
 
 
+const generateStimulusData = (type, variant) => {
+    let data = {};
+
+    if (type === 'matching') {
+        if (variant === 'equations') {
+            const generateEquation = (target) => {
+                const mode = randomInt(1, 4); // 1:+, 2:-, 3:*, 4:/
+                if (mode === 1) { // +
+                    const a = randomInt(1, target - 1);
+                    return `${a} + ${target - a}`;
+                } else if (mode === 2) { // -
+                    const a = randomInt(target + 1, target + 10);
+                    return `${a} - ${a - target}`;
+                } else if (mode === 3) { // *
+                    const factors = [];
+                    for (let i = 1; i <= target; i++) if (target % i === 0) factors.push(i);
+                    const a = factors[randomInt(0, factors.length - 1)];
+                    return `${target / a} x ${a}`;
+                } else { // /
+                    const a = randomInt(2, 5);
+                    return `${target * a} ÷ ${a}`;
+                }
+            };
+
+            const targetNum = randomInt(4, 20); // manageable numbers
+            const correctEq = generateEquation(targetNum);
+
+            // Distractors
+            const distractor1 = generateEquation(targetNum + randomInt(1, 5));
+            const distractor2 = generateEquation(targetNum - randomInt(1, 3));
+
+            const opts = [correctEq, distractor1, distractor2].sort(() => Math.random() - 0.5);
+
+            data = {
+                stimulus: targetNum.toString(),
+                options: opts,
+                correctOption: correctEq
+            };
+
+        } else if (variant === 'mammals') {
+            const correct = MAMMALS[randomInt(0, MAMMALS.length - 1)];
+            const d1 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
+            let d2 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
+            while (d2.name === d1.name) {
+                d2 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
+            }
+
+            const opts = [correct, d1, d2].sort(() => Math.random() - 0.5);
+
+            data = {
+                stimulus: "Mammal",
+                options: opts,
+                correctOption: correct.name
+            };
+        }
+    } else if (type === 'sorting') {
+        if (variant === 'letters') {
+            const categories = ["A-I", "J-R", "S-Z"];
+            const ranges = {
+                "A-I": "ABCDEFGHI",
+                "J-R": "JKLMNOPQR",
+                "S-Z": "STUVWXYZ"
+            };
+
+            const getLetter = (cat) => ranges[cat][randomInt(0, ranges[cat].length - 1)];
+
+            const opts = [];
+            const usedLetters = new Set();
+
+            let safety = 0;
+            while (opts.length < 3 && safety < 50) {
+                safety++;
+                const cat = categories[randomInt(0, 2)];
+                const letter = getLetter(cat);
+
+                if (!usedLetters.has(letter)) {
+                    usedLetters.add(letter);
+                    opts.push({ text: letter, category: cat });
+                }
+            }
+
+            data = {
+                stimulus: "Sort Items",
+                targets: categories,
+                options: opts
+            };
+
+        } else if (variant === 'syllables') {
+            const categories = ["1 Syllable", "2 Syllables", "3 Syllables"];
+            const wordMap = {
+                "1 Syllable": [
+                    "Cat", "Dog", "Sun", "Moon", "Fish",
+                    "Hat", "Ball", "Cup", "Tree", "Car",
+                    "Book", "Pen", "Door", "Bird", "Cloud",
+                    "Sky", "Rain", "Snow", "Wind", "Star",
+                    "Key", "Lock", "Shoe", "Sock", "Bag"
+                ],
+                "2 Syllables": [
+                    "Paper", "Water", "Apple", "Table", "Happy",
+                    "Tiger", "Pencil", "Window", "Flower", "Garden",
+                    "Doctor", "Teacher", "Sister", "Brother", "Pocket",
+                    "Rabbit", "Monkey", "Lion", "Zebra", "Pizza",
+                    "Cookie", "Candy", "Balloon", "Party", "Music"
+                ],
+                "3 Syllables": [
+                    "Elephant", "Banana", "Computer", "Radio", "Camera",
+                    "Umbrella", "Tomato", "Potato", "Hospital", "Library",
+                    "Octopus", "Butterfly", "Galaxy", "Telephone", "Energy",
+                    "Strawberry", "Pineapple", "Dinosaur", "Basketball", "Violin",
+                    "Video", "Calendar", "Envelope", "Bicycle", "Vacation"
+                ]
+            };
+
+            const getWord = (cat) => wordMap[cat][randomInt(0, wordMap[cat].length - 1)];
+
+            const opts = [];
+            const usedWords = new Set();
+
+            let safety = 0;
+            while (opts.length < 3 && safety < 50) {
+                safety++;
+                const cat = categories[randomInt(0, 2)];
+                const word = getWord(cat);
+
+                if (!usedWords.has(word)) {
+                    usedWords.add(word);
+                    opts.push({ text: word, category: cat });
+                }
+            }
+
+            data = {
+                stimulus: "Sort Syllables",
+                targets: categories,
+                options: opts
+            };
+        }
+    }
+    return data;
+};
+
 exports.getStimulus = async (req, res) => {
     try {
-        const { type, variant } = req.query;
-        let data = {};
+        const { type, variant, batchSize } = req.query;
 
-        if (type === 'matching') {
-            if (variant === 'equations') {
-                // New Logic: Target is the number (Answer), Options are equations (Question)
-                // We need to generate a target number, then 1 correct equation and 2 distractors.
+        const count = parseInt(batchSize) || 1;
 
-                // Helper to generate equation for a result
-                const generateEquation = (target) => {
-                    const mode = randomInt(1, 4); // 1:+, 2:-, 3:*, 4:/
-                    if (mode === 1) { // +
-                        const a = randomInt(1, target - 1);
-                        return `${a} + ${target - a}`;
-                    } else if (mode === 2) { // -
-                        const a = randomInt(target + 1, target + 10);
-                        return `${a} - ${a - target}`;
-                    } else if (mode === 3) { // *
-                        // Simple factors
-                        const factors = [];
-                        for (let i = 1; i <= target; i++) if (target % i === 0) factors.push(i);
-                        const a = factors[randomInt(0, factors.length - 1)];
-                        return `${target / a} x ${a}`;
-                    } else { // /
-                        const a = randomInt(2, 5);
-                        return `${target * a} ÷ ${a}`;
-                    }
-                };
-
-                const targetNum = randomInt(4, 20); // manageable numbers
-                const correctEq = generateEquation(targetNum);
-
-                // Distractors
-                const distractor1 = generateEquation(targetNum + randomInt(1, 5));
-                const distractor2 = generateEquation(targetNum - randomInt(1, 3));
-
-                const opts = [correctEq, distractor1, distractor2].sort(() => Math.random() - 0.5);
-
-                // We send 'target' as the answer (displayed on right)
-                // 'options' as the draggables (displayed on left)
-                // Implicitly, the frontend needs to know which option is correct. 
-                // We can send the correct string in a hidden field or verify on backend.
-                // For security/simplicity in this refactor, we just verify loosely or send 'correctOptionId'.
-                // Actually, backend submit checks 'correct' boolean sent from frontend. 
-                // To prevent cheating, we should validate on backend, but current arch trusts frontend 'correct' flag.
-                // We'll stick to that for now.
-
-                data = {
-                    stimulus: targetNum.toString(), // The static target on the right
-                    options: opts, // The draggables on the left
-                    correctOption: correctEq // Helper for frontend to know which one is true
-                };
-
-            } else if (variant === 'mammals') {
-                const correct = MAMMALS[randomInt(0, MAMMALS.length - 1)];
-                // Pick 2 distinct distractors from NON_MAMMALS (Birds + Reptiles)
-                const d1 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
-                let d2 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
-                while (d2.name === d1.name) {
-                    d2 = NON_MAMMALS[randomInt(0, NON_MAMMALS.length - 1)];
-                }
-
-                const opts = [correct, d1, d2].sort(() => Math.random() - 0.5);
-
-                data = {
-                    stimulus: "Mammal",     // Display fixed text on Right
-                    options: opts,          // Draggables on Left (Objects: {name, img})
-                    correctOption: correct.name // Validation uses Name
-                };
+        if (count > 1) {
+            const results = [];
+            for (let i = 0; i < count; i++) {
+                results.push(generateStimulusData(type, variant));
             }
-        } else if (type === 'sorting') {
-            if (variant === 'letters') {
-                // Fixed Categories: A-I, J-R, S-Z
-                const categories = ["A-I", "J-R", "S-Z"];
-                const ranges = {
-                    "A-I": "ABCDEFGHI",
-                    "J-R": "JKLMNOPQR",
-                    "S-Z": "STUVWXYZ"
-                };
-
-                // Helper to get random letter from range
-                const getLetter = (cat) => ranges[cat][randomInt(0, ranges[cat].length - 1)];
-
-                // Generate 3 items (options) for the left side
-                // We want at least one to be correct for *some* category? 
-                // Actually the user drags Item -> Category.
-                // Image shows 3 distinct items on left. 3 distinct bins on right.
-                // Assuming any item can be dragged to its corresponding bin.
-
-                const opts = [];
-                const usedLetters = new Set();
-
-                let safety = 0;
-                while (opts.length < 3 && safety < 50) {
-                    safety++;
-                    const cat = categories[randomInt(0, 2)];
-                    const letter = getLetter(cat);
-
-                    if (!usedLetters.has(letter)) {
-                        usedLetters.add(letter);
-                        opts.push({ text: letter, category: cat });
-                    }
-                }
-
-                data = {
-                    stimulus: "Sort Items",
-                    targets: categories, // Right Side Bins
-                    options: opts        // Left Side Items (with their correct category secret)
-                };
-
-            } else if (variant === 'syllables') {
-                const categories = ["1 Syllable", "2 Syllables", "3 Syllables"];
-                const wordMap = {
-                    "1 Syllable": [
-                        "Cat", "Dog", "Sun", "Moon", "Fish",
-                        "Hat", "Ball", "Cup", "Tree", "Car",
-                        "Book", "Pen", "Door", "Bird", "Cloud",
-                        "Sky", "Rain", "Snow", "Wind", "Star",
-                        "Key", "Lock", "Shoe", "Sock", "Bag"
-                    ],
-                    "2 Syllables": [
-                        "Paper", "Water", "Apple", "Table", "Happy",
-                        "Tiger", "Pencil", "Window", "Flower", "Garden",
-                        "Doctor", "Teacher", "Sister", "Brother", "Pocket",
-                        "Rabbit", "Monkey", "Lion", "Zebra", "Pizza",
-                        "Cookie", "Candy", "Balloon", "Party", "Music"
-                    ],
-                    "3 Syllables": [
-                        "Elephant", "Banana", "Computer", "Radio", "Camera",
-                        "Umbrella", "Tomato", "Potato", "Hospital", "Library",
-                        "Octopus", "Butterfly", "Galaxy", "Telephone", "Energy",
-                        "Strawberry", "Pineapple", "Dinosaur", "Basketball", "Violin",
-                        "Video", "Calendar", "Envelope", "Bicycle", "Vacation"
-                    ]
-                };
-
-                const getWord = (cat) => wordMap[cat][randomInt(0, wordMap[cat].length - 1)];
-
-                const opts = [];
-                const usedWords = new Set();
-
-                // Attempt to fill 3 distinct options
-                // Safety counter to prevent infinite loop (though unlikely with large lists)
-                let safety = 0;
-                while (opts.length < 3 && safety < 50) {
-                    safety++;
-                    const cat = categories[randomInt(0, 2)];
-                    const word = getWord(cat);
-
-                    if (!usedWords.has(word)) {
-                        usedWords.add(word);
-                        opts.push({ text: word, category: cat });
-                    }
-                }
-
-                data = {
-                    stimulus: "Sort Syllables",
-                    targets: categories,
-                    options: opts
-                };
-            }
+            return res.json({ success: true, data: results });
+        } else {
+            const data = generateStimulusData(type, variant);
+            return res.json({ success: true, data });
         }
 
-        res.json({ success: true, data });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

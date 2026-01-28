@@ -50,8 +50,9 @@ export const api = {
         return response.json();
     },
 
-    getStimulus: async (type, variant) => {
-        const response = await fetch(`${API_BASE_URL}/tasks/stimulus?type=${type}&variant=${variant}`, { headers: HEADERS });
+    getStimulus: async (type, variant, batchSize = 1) => {
+        const url = `${API_BASE_URL}/tasks/stimulus?type=${type}&variant=${variant}&batchSize=${batchSize}`;
+        const response = await fetch(url, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to fetch stimulus");
         return response.json();
     },

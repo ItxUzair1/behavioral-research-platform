@@ -4,8 +4,9 @@ import { RewardModal } from '../common/RewardModal';
 import { playTrialCompleteSound } from '../../utils/audio';
 
 export const MatchingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
+    // Queue State
+    const stimulusQueue = useRef([]);
     const [stimulus, setStimulus] = useState(null);
-    const [nextStimulus, setNextStimulus] = useState(null); // Buffer for next trial
     const [loading, setLoading] = useState(true);
     const [earnings, setEarnings] = useState(0);
     const [internalTrialCount, setInternalTrialCount] = useState(0);
@@ -23,14 +24,22 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
     // Show earnings if NOT Pre-Training
     const showEarnings = !isPreTraining;
 
-    const fetchStimulusData = async () => {
+    const fetchStimulusBatch = async (count = 5) => {
         try {
-            const res = await api.getStimulus('matching', variant);
-            if (res.success) return res.data;
+            const res = await api.getStimulus('matching', variant, count);
+            if (res.success) {
+                // Determine if we got an array or single item (backward compat)
+                const newItems = Array.isArray(res.data) ? res.data : [res.data];
+
+                // Preload images for these items
+                newItems.forEach(item => preloadImages(item));
+
+                return newItems;
+            }
         } catch (err) {
             console.error(err);
         }
-        return null;
+        return [];
     };
 
     const preloadImages = (stim) => {
@@ -41,7 +50,6 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                     const img = new Image();
                     img.src = `/images/${opt.id}${opt.ext}`;
                 } else {
-                    // Fallback to old behavior if ext missing (shouldn't happen for animals)
                     const extensions = ['.png', '.jpg', '.jpeg', '.jfif'];
                     extensions.forEach(ext => {
                         const img = new Image();
@@ -52,22 +60,17 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
         });
     };
 
-    useEffect(() => {
-        if (nextStimulus) {
-            preloadImages(nextStimulus);
-        }
-    }, [nextStimulus]);
-
+    // Effect: init task and fill queue
     const initTask = async () => {
         setLoading(true);
         try {
-            // 1. Get Stimulus (Current + Next)
-            const currentData = await fetchStimulusData();
-            if (currentData) setStimulus(currentData);
+            // 1. Initial Batch Fetch (5 Items)
+            const initialBatch = await fetchStimulusBatch(5);
+            stimulusQueue.current = initialBatch;
 
-            // Fetch next in background
-            const nextData = await fetchStimulusData();
-            if (nextData) setNextStimulus(nextData);
+            if (stimulusQueue.current.length > 0) {
+                setStimulus(stimulusQueue.current.shift());
+            }
 
             // 2. Initialize and get counts
             const startRes = await api.startTask(participantId, 'matching', phase, variant);
@@ -85,91 +88,75 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
     useEffect(() => {
         initTask();
-    }, [variant]); // Re-init if variant changes
+    }, [variant]);
 
     const handleDrop = async (droppedOption) => {
         if (!stimulus) return;
 
+        // ... Drop logic ... (unchanged part simplified for replacing surrounding code)
         // Determine selected option label
         let selectedOptionLabel = droppedOption;
-        // Check if droppedOption is an ID or Name
-        // Try to find it in stimulus options
         if (stimulus && stimulus.options) {
-            // Find index
             const idx = stimulus.options.findIndex(o => o === droppedOption || o.name === droppedOption || o.id === droppedOption);
-            if (idx !== -1) {
-                // selectedOptionLabel = `Position ${idx + 1} (${found.name})`; // Or just Position
-                selectedOptionLabel = `Position ${idx + 1}`;
-            }
+            if (idx !== -1) selectedOptionLabel = `Position ${idx + 1}`;
         }
 
         const isCorrect = droppedOption === stimulus.correctOption;
         const rt = Math.floor(Math.random() * 500 + 500);
 
-
-        // Submit to backend FIRST to get reward info
         try {
             const res = await api.submitTaskResult({
                 participantId,
                 taskType: 'matching',
                 condition: phase,
-                variant,  // Pass variant
+                variant,
                 correct: isCorrect,
-                selectedOption: selectedOptionLabel // Pass selected option
+                selectedOption: selectedOptionLabel
             });
 
             if (res.success) {
-                // Play success sound
                 playTrialCompleteSound();
-
-                // Update specific states
                 setInternalTrialCount(res.trialsCompleted);
-
-                // Log the trial with authoritative data
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
                     reward: res.reward,
                     currentThreshold: res.currentThreshold
                 });
 
-                // Handle Reward Modal - Show regardless of phase if triggered
                 if (res.reward) {
                     setRewardData({ amount: res.amount });
                 } else {
-                    // Slight delay to allow sound/visual feedback, then advance
-                    setTimeout(advanceStimulus, 500);
+                    setTimeout(advanceStimulus, 200); // reduced delay for speed
                 }
 
-                // Handle Earnings Display - Only for Main Tasks
-                if (showEarnings) {
-                    setEarnings(res.totalEarnings);
-                }
+                if (showEarnings) setEarnings(res.totalEarnings);
             }
         } catch (err) {
             console.error(err);
-            // Fallback log without reward info if network fails?? 
-            // Or just log failure.
             onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
-            setTimeout(advanceStimulus, 500);
+            setTimeout(advanceStimulus, 200);
         }
     };
 
     const advanceStimulus = async () => {
-        if (nextStimulus) {
-            setStimulus(nextStimulus);
-            setNextStimulus(null); // Clear buffer
-            // Fetch next one in background
-            const data = await fetchStimulusData();
-            if (data) setNextStimulus(data);
+        // Instant Next
+        if (stimulusQueue.current.length > 0) {
+            setStimulus(stimulusQueue.current.shift());
         } else {
-            // Buffer empty? Fetch directly
-            setLoading(true); // Short loading state if lag
-            const data = await fetchStimulusData();
-            if (data) setStimulus(data);
+            // Emergency fetch if empty
+            setLoading(true);
+            const batch = await fetchStimulusBatch(3);
+            if (batch.length > 0) {
+                stimulusQueue.current = batch;
+                setStimulus(stimulusQueue.current.shift());
+            }
             setLoading(false);
+        }
 
-            // Refill buffer
-            const next = await fetchStimulusData();
-            if (next) setNextStimulus(next);
+        // Background Refill if low
+        if (stimulusQueue.current.length < 3) {
+            fetchStimulusBatch(5).then(newItems => {
+                stimulusQueue.current = [...stimulusQueue.current, ...newItems];
+            });
         }
     };
 
