@@ -5,9 +5,9 @@ import { Send, Trophy, BarChart, Activity, Heart } from 'lucide-react';
 import { api } from '../../services/api';
 
 const CONDITIONS = [
-    { id: 'Genuine', label: 'Green Arrangement (Genuine)', color: 'bg-green-100 border-green-500', iconColor: 'text-green-600' },
-    { id: 'Apparent', label: 'Purple Arrangement (Apparent)', color: 'bg-purple-100 border-purple-500', iconColor: 'text-purple-600' },
-    { id: 'Coercion', label: 'Orange Arrangement (Coercion)', color: 'bg-orange-100 border-orange-500', iconColor: 'text-orange-600' }
+    { id: 'Genuine', label: 'Green Arrangement', color: 'bg-green-100 border-green-500', iconColor: 'text-green-600' },
+    { id: 'Apparent', label: 'Purple Arrangement', color: 'bg-purple-100 border-purple-500', iconColor: 'text-purple-600' },
+    { id: 'Coercion', label: 'Orange Arrangement', color: 'bg-orange-100 border-orange-500', iconColor: 'text-orange-600' }
 ];
 
 export const PostSurvey = ({ onNext, participantId }) => {
@@ -96,7 +96,7 @@ export const PostSurvey = ({ onNext, participantId }) => {
                     onDragStart={(e) => handleDragStart(e, index, listType)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, index, listType, items, setItems)}
-                    className={`p-4 border-2 rounded-lg cursor-grab active:cursor-grabbing shadow-sm flex items-center gap-4 transition-all hover:shadow-md ${item.color}`}
+                    className={`p-4 border-2 rounded-lg cursor-grab active:cursor-grabbing shadow-sm flex items-center gap-4 transition-all hover:shadow-md ${item.color} touch-none`}
                 >
                     <span className="font-bold text-gray-500 text-lg w-8 h-8 flex items-center justify-center bg-white rounded-full border border-gray-300">
                         {index + 1}
@@ -154,8 +154,8 @@ export const PostSurvey = ({ onNext, participantId }) => {
                             key={cond.id}
                             onClick={() => setControlChoice(cond.label)}
                             className={`p-4 border-2 rounded-xl text-center transition-all ${controlChoice === cond.label
-                                    ? 'ring-4 ring-offset-2 ring-blue-400 border-blue-600 bg-blue-50 scale-105'
-                                    : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                ? 'ring-4 ring-offset-2 ring-blue-400 border-blue-600 bg-blue-50 scale-105'
+                                : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
                                 }`}
                         >
                             <div className={`w-full h-12 mb-2 rounded ${cond.color}`}></div>

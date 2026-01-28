@@ -220,11 +220,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             <p className={`${currentTheme.text} opacity-80`}>{config.description}</p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                            {(phase === 'Genuine' || variant === 'Pre-Training') && (
-                                <div className={`px-3 py-1 rounded-full bg-white/50 text-sm font-mono font-medium ${currentTheme.text}`}>
-                                    Trial {trialNumber} / {totalTrials}
-                                </div>
-                            )}
+                            {/* Trial Counter Removed */}
                             {/* Opt Out Button - Logic: onOptOut prop callback */}
                             {/* Opt Out Button - Only render if onOptOut is provided */}
                             {onOptOut && (

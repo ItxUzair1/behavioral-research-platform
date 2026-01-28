@@ -46,11 +46,7 @@ export const MainLayout = ({ currentStep, children, participantId, condition }) 
                                 PID: <span className="text-gray-900 font-semibold">{participantId}</span>
                             </div>
                         )}
-                        {condition && (
-                            <div className="px-3 py-1 bg-blue-50 rounded-full text-blue-600 text-xs font-medium uppercase tracking-wide">
-                                {condition}
-                            </div>
-                        )}
+
                     </div>
                 </div>
             </header>

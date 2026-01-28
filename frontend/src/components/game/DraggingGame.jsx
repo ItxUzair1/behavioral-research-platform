@@ -202,13 +202,7 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     return (
         <div className={`flex flex-col items-center gap-4 min-h-[500px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
-            {/* Top Bar with Trial Count */}
-            <div className={`w-full flex justify-${showEarnings ? 'between' : 'center'} px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md`}>
-                <div>Trials: {displayTrial} / {displayMax}</div>
-                {showEarnings && (
-                    <div className="text-green-400 font-bold">Earnings: ${earnings.toFixed(2)}</div>
-                )}
-            </div>
+            {/* Earnings Display Removed */}
 
             {/* INSTRUCTIONS */}
             <div className="bg-white border-2 border-black p-4 text-center max-w-xl shadow-sm z-10 mt-2">

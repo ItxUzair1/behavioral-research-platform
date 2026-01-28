@@ -5,10 +5,12 @@ import { playTrialCompleteSound } from '../../utils/audio';
 
 export const SortingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [stimulus, setStimulus] = useState(null);
+    const [nextStimulus, setNextStimulus] = useState(null); // Buffer
     const [loading, setLoading] = useState(true);
     const [earnings, setEarnings] = useState(0);
     const [internalTrialCount, setInternalTrialCount] = useState(0);
     const [rewardData, setRewardData] = useState(null);
+    const [selectedOption, setSelectedOption] = useState(null); // Re-added for Tap fallback
 
     const isGenuine = phase?.toLowerCase().includes('genuine');
     const isPreTraining = phase?.toLowerCase().includes('pre-training');
@@ -20,11 +22,24 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     // Show earnings if NOT Pre-Training
     const showEarnings = !isPreTraining;
 
+    const fetchStimulusData = async () => {
+        try {
+            const res = await api.getStimulus('sorting', variant);
+            if (res.success) return res.data;
+        } catch (err) {
+            console.error(err);
+        }
+        return null;
+    };
+
     const initTask = async () => {
         setLoading(true);
         try {
-            const res = await api.getStimulus('sorting', variant);
-            if (res.success) setStimulus(res.data);
+            const currentData = await fetchStimulusData();
+            if (currentData) setStimulus(currentData);
+
+            const nextData = await fetchStimulusData();
+            if (nextData) setNextStimulus(nextData);
 
             const startRes = await api.startTask(participantId, 'sorting', phase, variant);
             if (startRes.success) {
@@ -46,7 +61,6 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
         // Validation handled by backend or frontend check?
         // Sorting usually checks category matching.
         // Assuming stimulus.options has the category.
-
 
         // Find the item in options to verify category? 
         // Logic depends on how drag/drop is implemented.
@@ -85,7 +99,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                 if (res.reward) {
                     setRewardData({ amount: res.amount });
                 } else {
-                    setTimeout(fetchNextStimulus, 500);
+                    setTimeout(advanceStimulus, 500);
                 }
 
                 // Handle Earnings Display
@@ -97,22 +111,30 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             console.error(err);
             // Fallback
             onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
-            setTimeout(fetchNextStimulus, 500);
+            setTimeout(advanceStimulus, 500);
         }
     };
 
-    const fetchNextStimulus = async () => {
-        try {
-            const res = await api.getStimulus('sorting', variant);
-            if (res.success) setStimulus(res.data);
-        } catch (err) {
-            console.error(err);
+    const advanceStimulus = async () => {
+        if (nextStimulus) {
+            setStimulus(nextStimulus);
+            setNextStimulus(null);
+            const data = await fetchStimulusData();
+            if (data) setNextStimulus(data);
+        } else {
+            setLoading(true);
+            const data = await fetchStimulusData();
+            if (data) setStimulus(data);
+            setLoading(false);
+
+            const next = await fetchStimulusData();
+            if (next) setNextStimulus(next);
         }
     };
 
     const handleModalClose = () => {
         setRewardData(null);
-        fetchNextStimulus();
+        advanceStimulus();
     };
 
     if (loading) return <div className="p-10 text-center font-mono text-gray-500">Loading Task...</div>;
@@ -130,13 +152,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     return (
         <div className={`flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
-            {/* Top Bar with Trial Count */}
-            <div className={`w-full flex justify-${showEarnings ? 'between' : 'center'} px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md`}>
-                <div>Trials: {displayTrial} / {displayMax}</div>
-                {showEarnings && (
-                    <div className="text-green-400 font-bold">Earnings: ${earnings.toFixed(2)}</div>
-                )}
-            </div>
+            {/* Earnings Display Removed */}
 
             {/* INSTRUCTIONS */}
             <div className="bg-white border-2 border-black p-4 text-center max-w-xl shadow-sm z-10 mt-2">
@@ -154,7 +170,7 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                 />
             )}
 
-            <div className="flex w-full justify-between items-start px-8 mt-4 flex-1 gap-8">
+            <div className="flex flex-col md:flex-row w-full justify-between items-start px-4 md:px-8 mt-4 flex-1 gap-8">
                 {/* LEFT SIDE: Draggable Options */}
                 {/* Logic: Display 3 items, drag to targets? 
                     Actually, if we drag items to targets, we need to know WHICH item was dragged.
@@ -165,19 +181,24 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                     targets.map...
                 */}
 
-                <div className="flex flex-col gap-4">
-                    {stimulus?.options.map((opt, idx) => (
-                        <div
-                            key={idx}
-                            draggable={!rewardData}
-                            onDragStart={(e) => {
-                                e.dataTransfer.setData("application/json", JSON.stringify(opt));
-                            }}
-                            className="w-32 h-32 bg-white border-4 border-black flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-105 transition-transform shadow-sm"
-                        >
-                            <span className="text-xl font-serif font-bold">{opt.text}</span>
-                        </div>
-                    ))}
+                <div className="flex flex-row md:flex-col gap-4 flex-wrap justify-center">
+                    {stimulus?.options.map((opt, idx) => {
+                        const isSelected = selectedOption === opt;
+                        return (
+                            <div
+                                key={idx}
+                                draggable={!rewardData}
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData("application/json", JSON.stringify(opt));
+                                    // Do NOT set selectedOption here
+                                }}
+                                onClick={() => setSelectedOption(opt)}
+                                className={`w-20 h-20 md:w-32 md:h-32 bg-white border-2 md:border-4 ${isSelected ? 'border-blue-500 ring-2 ring-blue-300' : 'border-black'} flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-105 transition-transform shadow-sm touch-none`}
+                            >
+                                <span className="text-sm md:text-xl font-serif font-bold">{opt.text}</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* RIGHT SIDE: Categories */}
@@ -191,11 +212,18 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                                 try {
                                     const data = JSON.parse(e.dataTransfer.getData("application/json"));
                                     handleDrop(data, cat, idx);
+                                    setSelectedOption(null);
                                 } catch (e) { console.error(e); }
                             }}
-                            className="w-32 h-32 bg-white border-4 border-black flex items-center justify-center transition-colors shadow-sm"
+                            onClick={() => {
+                                if (selectedOption) {
+                                    handleDrop(selectedOption, cat, idx);
+                                    setSelectedOption(null);
+                                }
+                            }}
+                            className={`w-20 h-20 md:w-32 md:h-32 bg-white border-2 md:border-4 ${selectedOption ? 'border-blue-500 border-dashed bg-blue-50' : 'border-black'} flex items-center justify-center transition-colors shadow-sm`}
                         >
-                            <span className="text-xl font-serif font-bold text-center px-2">{cat}</span>
+                            <span className="text-sm md:text-xl font-serif font-bold text-center px-1 md:px-2">{cat}</span>
                         </div>
                     ))}
                 </div>

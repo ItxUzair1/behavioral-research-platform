@@ -5,10 +5,12 @@ import { playTrialCompleteSound } from '../../utils/audio';
 
 export const MatchingGame = ({ variant, participantId, phase, onComplete, onTrialEnd, currentTrial, totalTrials }) => {
     const [stimulus, setStimulus] = useState(null);
+    const [nextStimulus, setNextStimulus] = useState(null); // Buffer for next trial
     const [loading, setLoading] = useState(true);
     const [earnings, setEarnings] = useState(0);
     const [internalTrialCount, setInternalTrialCount] = useState(0);
     const [rewardData, setRewardData] = useState(null); // { amount: number }
+    const [selectedOption, setSelectedOption] = useState(null); // Re-added for Tap interaction fallback
 
     const isGenuine = phase?.toLowerCase().includes('genuine');
     const isPreTraining = phase?.toLowerCase().includes('pre-training');
@@ -21,12 +23,45 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
     // Show earnings if NOT Pre-Training
     const showEarnings = !isPreTraining;
 
+    const fetchStimulusData = async () => {
+        try {
+            const res = await api.getStimulus('matching', variant);
+            if (res.success) return res.data;
+        } catch (err) {
+            console.error(err);
+        }
+        return null;
+    };
+
+    const preloadImages = (stim) => {
+        if (!stim || !stim.options) return;
+        const extensions = ['.png', '.jpg', '.jpeg', '.jfif'];
+        stim.options.forEach(opt => {
+            if (typeof opt === 'object' && opt.id) {
+                extensions.forEach(ext => {
+                    const img = new Image();
+                    img.src = `/images/${opt.id}${ext}`;
+                });
+            }
+        });
+    };
+
+    useEffect(() => {
+        if (nextStimulus) {
+            preloadImages(nextStimulus);
+        }
+    }, [nextStimulus]);
+
     const initTask = async () => {
         setLoading(true);
         try {
-            // 1. Get Stimulus
-            const res = await api.getStimulus('matching', variant);
-            if (res.success) setStimulus(res.data);
+            // 1. Get Stimulus (Current + Next)
+            const currentData = await fetchStimulusData();
+            if (currentData) setStimulus(currentData);
+
+            // Fetch next in background
+            const nextData = await fetchStimulusData();
+            if (nextData) setNextStimulus(nextData);
 
             // 2. Initialize and get counts
             const startRes = await api.startTask(participantId, 'matching', phase, variant);
@@ -94,7 +129,8 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 if (res.reward) {
                     setRewardData({ amount: res.amount });
                 } else {
-                    setTimeout(fetchNextStimulus, 500);
+                    // Slight delay to allow sound/visual feedback, then advance
+                    setTimeout(advanceStimulus, 500);
                 }
 
                 // Handle Earnings Display - Only for Main Tasks
@@ -107,22 +143,33 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             // Fallback log without reward info if network fails?? 
             // Or just log failure.
             onTrialEnd(isCorrect, rt, selectedOptionLabel, {});
-            setTimeout(fetchNextStimulus, 500);
+            setTimeout(advanceStimulus, 500);
         }
     };
 
-    const fetchNextStimulus = async () => {
-        try {
-            const res = await api.getStimulus('matching', variant);
-            if (res.success) setStimulus(res.data);
-        } catch (err) {
-            console.error(err);
+    const advanceStimulus = async () => {
+        if (nextStimulus) {
+            setStimulus(nextStimulus);
+            setNextStimulus(null); // Clear buffer
+            // Fetch next one in background
+            const data = await fetchStimulusData();
+            if (data) setNextStimulus(data);
+        } else {
+            // Buffer empty? Fetch directly
+            setLoading(true); // Short loading state if lag
+            const data = await fetchStimulusData();
+            if (data) setStimulus(data);
+            setLoading(false);
+
+            // Refill buffer
+            const next = await fetchStimulusData();
+            if (next) setNextStimulus(next);
         }
     };
 
     const handleModalClose = () => {
         setRewardData(null);
-        fetchNextStimulus();
+        advanceStimulus(); // Use new advance function
     };
 
     if (loading) return <div className="p-10 text-center font-mono text-gray-500">Loading Task...</div>;
@@ -140,13 +187,7 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
     return (
         <div className={`flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
-            {/* Top Bar with Trial Count */}
-            <div className={`w-full flex justify-${showEarnings ? 'between' : 'center'} px-8 py-2 bg-gray-800 text-white font-mono text-lg shadow-md`}>
-                <div>Trials: {displayTrial} / {displayMax}</div>
-                {showEarnings && (
-                    <div className="text-green-400 font-bold">Earnings: ${earnings.toFixed(2)}</div>
-                )}
-            </div>
+            {/* Earnings Display Removed */}
 
             {/* INSTRUCTIONS BOX */}
             <div className="bg-white border-2 border-black p-4 text-center max-w-xl shadow-sm z-10 mt-2">
@@ -164,19 +205,24 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 />
             )}
 
-            <div className="flex w-full justify-between items-center px-12 mt-4 flex-1">
+            <div className="flex flex-col md:flex-row w-full justify-between items-center px-4 md:px-12 mt-4 flex-1 gap-8 md:gap-0">
                 {/* LEFT SIDE: Draggable Options */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-row md:flex-col gap-4 md:gap-6 flex-wrap justify-center">
                     {stimulus?.options.map((opt, idx) => {
                         const isObject = typeof opt === 'object';
                         const displayValue = isObject ? opt.name : opt;
+                        const isSelected = selectedOption === displayValue;
 
                         return (
                             <div
                                 key={idx}
                                 draggable={!rewardData}
-                                onDragStart={(e) => e.dataTransfer.setData("text", displayValue)}
-                                className="w-32 h-24 bg-white border-4 border-black flex items-center justify-center cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-lg transition-transform overflow-hidden relative"
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData("text", displayValue);
+                                    // IMPORTANT: Do NOT set selectedOption here to avoid interrupting drag
+                                }}
+                                onClick={() => setSelectedOption(displayValue)}
+                                className={`w-20 h-16 md:w-32 md:h-24 bg-white border-2 md:border-4 ${isSelected ? 'border-blue-500 ring-2 ring-blue-300' : 'border-black'} flex items-center justify-center cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-lg transition-transform overflow-hidden relative touch-none`}
                             >
                                 {isObject && opt.id ? (
                                     <ImageWithFallback
@@ -184,7 +230,7 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                                         alt={opt.name}
                                     />
                                 ) : (
-                                    <span className="text-2xl font-serif">{displayValue}</span>
+                                    <span className="text-sm md:text-2xl font-serif">{displayValue}</span>
                                 )}
                             </div>
                         );
@@ -198,10 +244,17 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                         e.preventDefault();
                         const data = e.dataTransfer.getData("text");
                         handleDrop(data);
+                        setSelectedOption(null);
                     }}
-                    className="w-32 h-32 bg-white border-4 border-black flex items-center justify-center"
+                    onClick={() => {
+                        if (selectedOption) {
+                            handleDrop(selectedOption);
+                            setSelectedOption(null);
+                        }
+                    }}
+                    className={`w-24 h-24 md:w-32 md:h-32 bg-white border-2 md:border-4 ${selectedOption ? 'border-blue-500 border-dashed bg-blue-50' : 'border-black'} flex items-center justify-center transition-colors`}
                 >
-                    <span className="text-3xl font-serif">{stimulus?.stimulus}</span>
+                    <span className="text-xl md:text-3xl font-serif">{stimulus?.stimulus}</span>
                 </div>
             </div>
         </div>

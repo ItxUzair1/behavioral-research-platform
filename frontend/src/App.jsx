@@ -9,6 +9,8 @@ import { Payout } from './components/steps/Payout';
 import { ApparentFlow } from './components/steps/apparent/ApparentFlow';
 import { CoercionFlow } from './components/steps/coercion/CoercionFlow';
 
+import { AdminApp } from './AdminApp';
+
 import { api } from './services/api';
 
 const STEP_NAMES = {
@@ -22,6 +24,15 @@ const STEP_NAMES = {
 };
 
 function App() {
+  // Simple check for Admin Route
+  // In a full app with React Router, this would be a <Route>
+  // Here we check pathname directly on init.
+  const isAdminRoute = window.location.pathname === '/admin';
+
+  if (isAdminRoute) {
+    return <AdminApp />;
+  }
+
   const [currentStep, setCurrentStep] = useState(() => {
     const saved = localStorage.getItem('brp_step');
     return saved ? parseInt(saved, 10) : 1;
@@ -75,23 +86,6 @@ function App() {
     }
   };
 
-  const handleReset = () => {
-    // Clear all local storage keys
-    localStorage.removeItem('brp_step');
-    localStorage.removeItem('brp_pid');
-    localStorage.removeItem('brp_condition');
-    localStorage.removeItem('brp_choices');
-
-    // Reset state
-    setParticipantId(null);
-    setCondition(null);
-    setGenuineChoices(null);
-    setCurrentStep(1);
-
-    // Scroll to top
-    window.scrollTo(0, 0);
-  };
-
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -107,7 +101,7 @@ function App() {
       case 6:
         return <PostSurvey onNext={handleNext} participantId={participantId} />;
       case 7:
-        return <Payout onReset={handleReset} participantId={participantId} />;
+        return <Payout participantId={participantId} />;
       default:
         return <div>Unknown Step</div>;
     }
