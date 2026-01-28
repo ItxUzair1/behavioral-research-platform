@@ -34,7 +34,8 @@ const BIRDS = [
     { name: "Peacock", id: "peacock", ext: ".jfif" },
     { name: "Swan", id: "swan", ext: ".jfif" },
     { name: "Sparrow", id: "sparrow", ext: ".jfif" },
-    { name: "Hawk", id: "hawk", ext: ".jfif" }
+    { name: "Hawk", id: "hawk", ext: ".jfif" },
+    { name: "Pigeon", id: "pigeon", ext: ".jpg" }
 ];
 const REPTILES = [
     { name: "Snake", id: "snake", ext: ".jfif" },
@@ -49,7 +50,12 @@ const REPTILES = [
     { name: "Python", id: "python", ext: ".jfif" }
 ];
 
-const NON_MAMMALS = [...BIRDS, ...REPTILES];
+const AMPHIBIANS_FISH = [
+    { name: "Frog", id: "frog", ext: ".jfif" },
+    { name: "Shark", id: "shark", ext: ".jfif" }
+];
+
+const NON_MAMMALS = [...BIRDS, ...REPTILES, ...AMPHIBIANS_FISH];
 
 const LETTERS = [
     { q: "A", a: "Vowel" }, { q: "E", a: "Vowel" }, { q: "I", a: "Vowel" },
