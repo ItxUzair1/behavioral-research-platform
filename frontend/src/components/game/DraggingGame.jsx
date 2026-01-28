@@ -12,8 +12,10 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     // Draggable State
     const [position, setPosition] = useState(0); // 0 to 100 percentage
     const positionRef = useRef(0); // Ref to track position for event handlers
+    const maxPosRef = useRef(0); // Ref to track maximum reachable position
     const [isDragging, setIsDragging] = useState(false);
     const trackRef = useRef(null);
+    const handleRef = useRef(null);
     const [dragSuccess, setDragSuccess] = useState(false);
 
     const isGenuine = phase?.toLowerCase().includes('genuine');
@@ -47,6 +49,11 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
 
     // --- Drag Logic ---
     const handleStart = (e) => {
+        // Prevent default browser behavior (text selection, image drag)
+        if (e.cancelable && e.type !== 'touchstart') {
+            e.preventDefault();
+        }
+
         if (rewardData) return; // Block input if showing reward
         setIsDragging(true);
     };
@@ -58,10 +65,11 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         const rawX = clientX - rect.left;
         const width = rect.width;
 
-        // Handle width is w-24 = 96px
-        const handleWidthPx = 96;
+        // Dynamic Handle Width
+        const handleWidthPx = handleRef.current ? handleRef.current.offsetWidth : 96;
         const handlePercent = (handleWidthPx / width) * 100;
         const maxPos = 100 - handlePercent;
+        maxPosRef.current = maxPos;
 
         // Constrain
         let newPos = (rawX / width) * 100;
@@ -84,9 +92,10 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         if (!isDragging) return;
         setIsDragging(false);
 
-        // Check Success Condition (Drag > 75%)
+        // Check Success Condition (Drag > 90% of AVAILABLE distance)
         // Use REFINED value from Ref
-        if (positionRef.current > 75) {
+        const threshold = maxPosRef.current ? (maxPosRef.current * 0.90) : 75;
+        if (positionRef.current > threshold) {
             handleSubmit(true);
         } else {
             // Snap back (too small to count)
@@ -226,22 +235,24 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                 {/* Track Container */}
                 <div
                     ref={trackRef}
-                    className="w-full max-w-2xl h-32 bg-gray-300 border-4 border-gray-500 relative flex items-center shadow-inner"
+                    className="w-full max-w-2xl h-24 md:h-32 bg-gray-300 border-4 border-gray-500 relative flex items-center shadow-inner select-none"
                 >
                     {/* Target Area (Right) */}
-                    <div className={`absolute right-0 top-0 bottom-0 w-32 bg-black h-full flex items-center justify-center ${shapeClass}`}>
+                    <div className={`absolute right-0 top-0 bottom-0 w-14 md:w-32 bg-black h-full flex items-center justify-center ${shapeClass}`}>
                         {/* Visual indicator */}
                     </div>
 
                     {/* Draggable Shape */}
                     <div
+                        ref={handleRef}
                         onMouseDown={handleStart}
                         onTouchStart={handleStart}
                         style={{
                             left: `${position}%`,
-                            transition: isDragging ? 'none' : 'left 0.3s ease-out'
+                            transition: isDragging ? 'none' : 'left 0.3s ease-out',
+                            touchAction: 'none' // CRITICAL for mobile/tablet touches
                         }}
-                        className={`absolute top-0 bottom-0 w-24 h-full ${dragShapeBg} border-2 border-black cursor-grab active:cursor-grabbing shadow-xl z-20 flex items-center justify-center ${shapeClass}`}
+                        className={`absolute top-0 bottom-0 w-12 md:w-24 h-full ${dragShapeBg} border-2 border-black cursor-grab active:cursor-grabbing shadow-xl z-20 flex items-center justify-center touch-none ${shapeClass}`}
                     >
                         {/* Optional Inner Detail */}
                         <div className={`w-4 h-4 ${dragInnerBg} opacity-50 ${shapeClass}`}></div>
