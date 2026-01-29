@@ -138,6 +138,16 @@ function getParticipantSummary(p, metrics) {
         'postSurvey_timestamp': safeDate(p.postSurvey?.timestamp),
 
 
+        // Switch Task Stats
+        'matching_genuine_Switch-Task Latency': p.switchTaskStats?.matching_genuine?.latency || '',
+        'matching_genuine_Switch-Task Count': p.switchTaskStats?.matching_genuine?.count || 0,
+
+        'sorting_genuine_Switch-Task Latency': p.switchTaskStats?.sorting_genuine?.latency || '',
+        'sorting_genuine_Switch-Task Count': p.switchTaskStats?.sorting_genuine?.count || 0,
+
+        'dragging_genuine_Switch-Task Latency': p.switchTaskStats?.dragging_genuine?.latency || '',
+        'dragging_genuine_Switch-Task Count': p.switchTaskStats?.dragging_genuine?.count || 0,
+
     };
 
     // Flatten Metrics

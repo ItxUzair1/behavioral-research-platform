@@ -62,7 +62,7 @@ exports.logTrial = async (req, res) => {
                     participantId,
                     phase: phase,
                     taskType: taskType,
-                    eventType: 'Trial' // Only count actual trials, not other events
+                    eventType: 'Trial' // Only count actual trials
                 });
 
                 // 2. Identify Key
@@ -70,7 +70,7 @@ exports.logTrial = async (req, res) => {
                 const lowerP = phase.toLowerCase();
                 if (lowerP.includes('apparent')) suffix = 'apparent';
                 else if (lowerP.includes('coercion')) suffix = 'coercion';
-                else if (lowerP.includes('genuine')) suffix = 'genuine'; // Added Genuine
+                else if (lowerP.includes('genuine')) suffix = 'genuine';
 
                 if (suffix) {
                     const baseTask = taskType.toLowerCase();
@@ -83,7 +83,7 @@ exports.logTrial = async (req, res) => {
                         {
                             $set: {
                                 [updateField]: {
-                                    latency: responseTime, // Passed from frontend (Time from Onset -> Click)
+                                    latency: responseTime,
                                     count: trialsCount
                                 }
                             }
@@ -91,15 +91,45 @@ exports.logTrial = async (req, res) => {
                     );
                     console.log(`OptOut Stats Saved: ${key} | Latency: ${responseTime}ms | Count: ${trialsCount}`);
                 }
-
-                // 4. legacy penalty logic (keep if needed, or if covered elsewhere)
-                if (lowerP.includes('coercion')) {
-                    // ... existing penalty logic is below or integrated?
-                    // It seems the existing code block 58-96 WAS the penalty logic.
-                    // I should preserve it or merge it. 
-                }
             } catch (err) {
                 console.error("Error saving opt-out stats:", err);
+            }
+        }
+
+        // --- SWITCH TASK LOGIC (Genuine Only) ---
+        if (eventType === 'SwitchTask' && phase) {
+            try {
+                // 1. Calculate Count (Trials completed in this task so far)
+                const trialsCount = await TrialLog.countDocuments({
+                    participantId,
+                    phase: phase,
+                    taskType: taskType,
+                    eventType: 'Trial'
+                });
+
+                // 2. Identify Key (Only Genuine supports switching)
+                const lowerP = phase.toLowerCase();
+                if (lowerP.includes('genuine')) {
+                    const baseTask = taskType.toLowerCase();
+                    const key = `${baseTask}_genuine`;
+
+                    // 3. Update Participant
+                    const updateField = `switchTaskStats.${key}`;
+                    await Participant.updateOne(
+                        { participantId },
+                        {
+                            $set: {
+                                [updateField]: {
+                                    latency: responseTime, // Time from Onset -> Switch Click
+                                    count: trialsCount
+                                }
+                            }
+                        }
+                    );
+                    console.log(`SwitchTask Stats Saved: ${key} | Latency: ${responseTime}ms | Count: ${trialsCount}`);
+                }
+            } catch (err) {
+                console.error("Error saving switch task stats:", err);
             }
         }
 

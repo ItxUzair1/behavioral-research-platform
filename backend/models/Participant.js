@@ -152,6 +152,11 @@ const participantSchema = new mongoose.Schema({
         sorting_coercion: { latency: Number, count: Number },
         dragging_coercion: { latency: Number, count: Number }
     },
+    switchTaskStats: {
+        matching_genuine: { latency: Number, count: Number },
+        sorting_genuine: { latency: Number, count: Number },
+        dragging_genuine: { latency: Number, count: Number }
+    },
     miniSurveys: {
         genuine: { rating: Number, timestamp: Date },
         apparent: { rating: Number, timestamp: Date },

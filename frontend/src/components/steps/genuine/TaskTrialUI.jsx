@@ -181,7 +181,24 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
         if (onOptOut) onOptOut();
     };
 
-    const handleSwitch = () => {
+    const handleSwitch = async () => {
+        // Latency: Time from Trial Start -> Switch Click
+        const latency = Date.now() - trialStartTime;
+
+        // Log Switch Task Event
+        try {
+            await api.logTrial({
+                participantId: participantId || "GUEST",
+                taskType: type,
+                taskVariant: variant,
+                phase: phase,
+                trialNumber,
+                responseTime: latency,
+                correct: false,
+                eventType: "SwitchTask"
+            });
+        } catch (e) { console.error("Failed to log switch task", e); }
+
         setShowOptOutModal(false);
         if (onSwitch) onSwitch();
     };
