@@ -94,7 +94,7 @@ export const Demographics = ({ onNext, participantId }) => {
                             <option value="female">Female</option>
                             <option value="male">Male</option>
                             <option value="non-binary">Non-binary / third gender</option>
-                            <option value="prefer-to-self-describe">Prefer to self-describe</option>
+
                             <option value="prefer-not-to-say">Prefer not to say</option>
                         </select>
                         <label

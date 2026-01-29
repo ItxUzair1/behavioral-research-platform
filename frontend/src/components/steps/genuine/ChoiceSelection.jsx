@@ -44,8 +44,19 @@ export const ChoiceSelection = ({ options = [], choiceStep, onConfirm, participa
         }
     };
 
+    // Image Mapping
+    const IMAGE_MAP = {
+        'equations': '/images/matching_equations.png',
+        'mammals': '/images/matching_mammals.png',
+        'letters': '/images/sorting_letters.png',
+        'syllables': '/images/sorting_sylablles.png', // Note: filename typo matches user's file
+        'vr': '/images/dragging_square.png',
+        'pr': '/images/dragging_circle.png'
+    };
+
     const SelectionCard = ({ id, title, description }) => {
         const isSelected = selectedTask === id;
+        const imageSrc = IMAGE_MAP[id];
 
         return (
             <div
@@ -69,16 +80,22 @@ export const ChoiceSelection = ({ options = [], choiceStep, onConfirm, participa
                     </div>
                 </div>
 
-                <div className="mb-6 h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200 overflow-hidden">
-                    <div className="text-gray-400 text-xs font-mono uppercase text-center">
-                        [Screenshot of {title}]<br />
-                        (Experience from Pre-Training)
-                    </div>
+                <div className="mb-6 h-48 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200 overflow-hidden relative">
+                    {imageSrc ? (
+                        <img
+                            src={imageSrc}
+                            alt={`Screenshot of ${title}`}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="text-gray-400 text-xs font-mono uppercase text-center p-4">
+                            [Screenshot of {title}]<br />
+                            (Image not found)
+                        </div>
+                    )}
                 </div>
 
-                <p className="text-gray-600 text-sm mb-6 flex-1">
-                    {description}
-                </p>
+
             </div>
         );
     };

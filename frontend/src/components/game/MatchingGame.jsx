@@ -115,7 +115,9 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             });
 
             if (res.success) {
-                playTrialCompleteSound();
+                if (isCorrect) {
+                    playTrialCompleteSound();
+                }
                 setInternalTrialCount(res.trialsCompleted);
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
                     reward: res.reward,
@@ -180,7 +182,13 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
     return (
         <div className={`flex flex-col items-center gap-4 min-h-[600px] w-full max-w-4xl mx-auto p-4 border-2 relative ${bgClass} transition-colors duration-500`}>
 
-            {/* Earnings Display Removed */}
+            <div className="w-full flex justify-end px-2">
+                {showEarnings ? (
+                    <div className="bg-yellow-100 border-2 border-yellow-400 px-3 py-1 md:px-4 md:py-2 rounded-full font-bold text-yellow-800 shadow-sm text-sm md:text-base">
+                        Earnings: ${Number(earnings).toFixed(2)}
+                    </div>
+                ) : <div className="h-8"></div>}
+            </div>
 
             {/* INSTRUCTIONS BOX */}
             <div className="bg-white border-2 border-black p-4 text-center max-w-xl shadow-sm z-10 mt-2">
@@ -195,6 +203,9 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 <RewardModal
                     amount={rewardData.amount}
                     onDismiss={handleModalClose}
+                    message={isPreTraining
+                        ? "Great job, this is how you will earn money in the task"
+                        : `You have earned ${rewardData.amount} dollar\nPress OK to continue`}
                 />
             )}
 
