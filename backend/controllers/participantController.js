@@ -74,3 +74,38 @@ exports.updateParticipant = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.submitPayoutDetails = async (req, res) => {
+    try {
+        const { participantId } = req.params;
+        const { email, paymentMethod } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        const participant = await Participant.findOne({ participantId });
+
+        if (!participant) {
+            return res.status(404).json({ success: false, message: "Participant not found" });
+        }
+
+        // Update payout info
+        participant.payoutInfo = {
+            email: email,
+            status: 'Pending',
+            paymentMethod: paymentMethod || 'PayPal',
+            paidAt: null
+        };
+
+        await participant.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Payout request submitted successfully",
+            payoutInfo: participant.payoutInfo
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

@@ -16,7 +16,7 @@ exports.login = (req, res) => {
 exports.getParticipants = async (req, res) => {
     try {
         const participants = await Participant.find({})
-            .select('participantId conditionOrder currentStep timestamps earnings')
+            .select('participantId conditionOrder currentStep timestamps earnings payoutInfo')
             .sort({ 'timestamps.studyCompleted': -1, 'timestamps.consentGiven': -1 });
 
         const formatted = participants.map(p => ({
@@ -26,7 +26,8 @@ exports.getParticipants = async (req, res) => {
             conditionOrder: p.conditionOrder.join(', '),
             completedAt: p.timestamps.studyCompleted ? p.timestamps.studyCompleted.toISOString() : null,
             startedAt: p.timestamps.consentGiven ? p.timestamps.consentGiven.toISOString() : null,
-            earnings: p.earnings
+            earnings: p.earnings,
+            payoutInfo: p.payoutInfo // Include payout details
         }));
 
         res.json({ success: true, participants: formatted });
@@ -226,3 +227,60 @@ exports.getParticipantExport = async (req, res) => {
         res.status(500).json({ success: false, message: "Export failed" });
     }
 };
+
+exports.markAsPaid = async (req, res) => {
+    try {
+        const { participantId } = req.body;
+
+        const participant = await Participant.findOne({ participantId });
+        if (!participant) {
+            return res.status(404).json({ success: false, message: "Participant not found" });
+        }
+
+        if (!participant.payoutInfo) {
+            participant.payoutInfo = {};
+        }
+
+        participant.payoutInfo.status = 'Paid';
+        participant.payoutInfo.paidAt = new Date();
+
+        await participant.save();
+
+        res.json({ success: true, message: "Participant marked as paid", payoutInfo: participant.payoutInfo });
+
+    } catch (error) {
+        console.error("Mark Paid Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+exports.markAsPaidBulk = async (req, res) => {
+    try {
+        const { participantIds } = req.body; // Array of IDs
+
+        if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+            return res.status(400).json({ success: false, message: "No participant IDs provided" });
+        }
+
+        const result = await Participant.updateMany(
+            { participantId: { $in: participantIds } },
+            {
+                $set: {
+                    'payoutInfo.status': 'Paid',
+                    'payoutInfo.paidAt': new Date()
+                }
+            }
+        );
+
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} participants marked as paid`,
+            modifiedCount: result.modifiedCount
+        });
+
+    } catch (error) {
+        console.error("Bulk Mark Paid Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+

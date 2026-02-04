@@ -178,6 +178,16 @@ const participantSchema = new mongoose.Schema({
         demographicsCompleted: Date,
         genuineAssentChoice: Date,
         studyCompleted: Date
+    },
+    payoutInfo: {
+        email: { type: String, trim: true },
+        status: {
+            type: String,
+            enum: ['Not Requested', 'Pending', 'Paid'],
+            default: 'Not Requested'
+        },
+        paidAt: Date,
+        paymentMethod: { type: String, default: 'PayPal' }
     }
 }, { timestamps: true });
 

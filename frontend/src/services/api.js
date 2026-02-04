@@ -81,5 +81,44 @@ export const api = {
         const response = await fetch(`${API_BASE_URL}/tasks/earnings?participantId=${participantId}`, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to get earnings");
         return response.json();
+    },
+
+    submitPayoutDetails: async (participantId, email, paymentMethod) => {
+        const response = await fetch(`${API_BASE_URL}/participants/${participantId}/payout`, {
+            method: 'POST',
+            headers: HEADERS,
+            body: JSON.stringify({ email, paymentMethod })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Server error: ${response.status}`);
+        }
+        return response.json();
+    },
+
+    markAsPaid: async (token, participantId) => {
+        const response = await fetch(`${API_BASE_URL}/admin/mark-paid`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'x-admin-auth': token },
+            body: JSON.stringify({ participantId })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Server error: ${response.status}`);
+        }
+        return response.json();
+    },
+
+    markAsPaidBulk: async (token, participantIds) => {
+        const response = await fetch(`${API_BASE_URL}/admin/mark-paid-bulk`, {
+            method: 'POST',
+            headers: { ...HEADERS, 'x-admin-auth': token },
+            body: JSON.stringify({ participantIds })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Server error: ${response.status}`);
+        }
+        return response.json();
     }
 };

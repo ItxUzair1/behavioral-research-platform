@@ -7,6 +7,11 @@ import { api } from '../../services/api';
 
 export const Payout = ({ participantId }) => {
     const [earnings, setEarnings] = React.useState(0);
+    const [email, setEmail] = React.useState('');
+    const [paymentMethod, setPaymentMethod] = React.useState('PayPal');
+    const [status, setStatus] = React.useState('Loading...');
+    const [submitting, setSubmitting] = React.useState(false);
+    const [message, setMessage] = React.useState('');
 
     React.useEffect(() => {
         const fetchEarnings = async () => {
@@ -15,6 +20,11 @@ export const Payout = ({ participantId }) => {
                     const res = await api.getParticipant(participantId);
                     if (res.success && res.participant) {
                         setEarnings(res.participant.earnings || 0);
+                        if (res.participant.payoutInfo) {
+                            setStatus(res.participant.payoutInfo.status);
+                        } else {
+                            setStatus('Not Requested');
+                        }
                     }
                 } catch (err) {
                     console.error("Failed to fetch earnings:", err);
@@ -24,7 +34,22 @@ export const Payout = ({ participantId }) => {
         fetchEarnings();
     }, [participantId]);
 
-    // Data download is restricted to Admin Dashboard only
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const res = await api.submitPayoutDetails(participantId, email, paymentMethod);
+            if (res.success) {
+                setStatus('Pending');
+                setMessage('Payout request submitted successfully.');
+            }
+        } catch (err) {
+            console.error("Payout submission failed:", err);
+            setMessage('Failed to submit payout request. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div className="space-y-6 max-w-lg mx-auto text-center">
@@ -47,24 +72,89 @@ export const Payout = ({ participantId }) => {
                 </div>
             </Card>
 
-            <div className="space-y-3">
-                <p className="text-sm text-gray-500">
-                    Your payment code has been generated. <br />
-                    Please copy this code to MTurk/Prolific to verify completion.
-                </p>
+            <div className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-left">
+                <h3 className="text-lg font-bold text-gray-900">Withdraw Earnings</h3>
 
-                <div className="flex gap-2">
-                    <code className="flex-1 bg-white border border-gray-200 rounded-lg p-3 font-mono text-lg text-gray-900 tracking-widest text-center select-all">
-                        C-8F29A10X
-                    </code>
-                    <Button variant="secondary" onClick={() => navigator.clipboard.writeText("C-8F29A10X")}>
-                        Copy
-                    </Button>
-                </div>
+                {status === 'Not Requested' && (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Payment Method
+                            </label>
+                            <div className="flex gap-4 mb-4">
+                                <label className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'PayPal' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name="paymentMethod"
+                                            value="PayPal"
+                                            checked={paymentMethod === 'PayPal'}
+                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                            className="text-green-600 focus:ring-green-500"
+                                        />
+                                        <span className="font-medium text-gray-900">PayPal</span>
+                                    </div>
+                                </label>
+                                <label className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'Amazon Gift Card' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name="paymentMethod"
+                                            value="Amazon Gift Card"
+                                            checked={paymentMethod === 'Amazon Gift Card'}
+                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                            className="text-green-600 focus:ring-green-500"
+                                        />
+                                        <span className="font-medium text-gray-900">Amazon Card</span>
+                                    </div>
+                                </label>
+                            </div>
 
-                <div className="pt-8">
-                    {/* Participant download disabled per requirements */}
-                </div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {paymentMethod === 'PayPal' ? 'PayPal Email Address' : 'Email Address for Gift Card'}
+                            </label>
+                            <input
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 text-gray-900"
+                                placeholder="name@example.com"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                We will send your {paymentMethod} to this email.
+                            </p>
+                        </div>
+                        <Button type="submit" disabled={submitting} className="w-full">
+                            {submitting ? 'Submitting...' : 'Request Payout'}
+                        </Button>
+                        {message && <p className="text-red-600 text-sm">{message}</p>}
+                    </form>
+                )}
+
+                {status === 'Pending' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+                        <p className="font-medium flex items-center gap-2">
+                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+                            Payout Pending
+                        </p>
+                        <p className="text-sm mt-1">
+                            Your request has been received. Please allow 24-48 hours for processing.
+                        </p>
+                    </div>
+                )}
+
+                {status === 'Paid' && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
+                        <p className="font-medium flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            Payment Sent
+                        </p>
+                        <p className="text-sm mt-1">
+                            Funds have been sent to your PayPal account.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

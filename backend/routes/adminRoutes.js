@@ -38,5 +38,7 @@ router.post('/login', adminController.login);
 router.get('/participants', requireAdmin, adminController.getParticipants);
 router.get('/export/full', requireAdmin, adminController.getFullExport);
 router.get('/export/:participantId', requireAdmin, adminController.getParticipantExport);
+router.post('/mark-paid', requireAdmin, adminController.markAsPaid);
+router.post('/mark-paid-bulk', requireAdmin, adminController.markAsPaidBulk);
 
 module.exports = router;
