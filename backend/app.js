@@ -12,6 +12,8 @@ const app = express();
 app.use(cors({
     origin: [
         'https://research-platform-rb7p.onrender.com',
+        'https://precise-data.com',
+        'https://www.precise-data.com',
         'http://localhost:5173',
         'http://localhost:5000'
     ],
