@@ -9,7 +9,16 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: '*' }));
+app.use(cors({
+    origin: [
+        'https://research-platform-rb7p.onrender.com',
+        'http://localhost:5173',
+        'http://localhost:5000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-auth', 'ngrok-skip-browser-warning']
+}));
 app.use(express.json());
 
 // Database Connection
