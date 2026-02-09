@@ -2,20 +2,25 @@ import React, { useState } from 'react';
 import { TaskTrialUI } from '../genuine/TaskTrialUI';
 import { Card } from '../../ui/Card';
 import { MiniSurvey } from '../../common/MiniSurvey';
+import { InstructionSlide } from '../../common/InstructionSlide';
 
 export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
-    // Steps: 
-    // 0: Matching
-    // 1: Sorting
-    // 2: Dragging
-    // 3: Mini Survey
+    // 0: Condition Intro "Orange"
+    // 1: Instruction "Matching"
+    // 2: Matching
+    // 3: Instruction "Sorting"
+    // 4: Sorting
+    // 5: Instruction "Dragging"
+    // 6: Dragging
+    // 7: Survey
+
     const [step, setStep] = useState(0);
     const [trial, setTrial] = useState(1);
 
     const handleStepComplete = () => {
-        if (step < 3) {
+        if (step < 7) {
             setStep(s => s + 1);
-            setTrial(1); // Reset
+            setTrial(1);
         } else {
             onNext();
         }
@@ -30,70 +35,36 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
         }
     };
 
-    // Coercion might behave differently on Opt-Out, but prompt said "Opt out of task (Disabled)" for ConditionTask
-    // However, the user said "can opt out anytime" in general. 
-    // But for Coercion specifically, the 'ConditionTask' UI had it disabled.
-    // Based on the name "Coercion", opt-out is likely discouraged or disabled.
-    // I will implement it but maybe it should be restricted or show a persistent prompt?
-    // For now, I'll allow it with a specific message or just like ApparentFlow to keep skeleton simple.
-    // Wait, the previous request specifically set "Opt out of task (Disabled)" for Coercion.
-    // I will disable the callback or show an alert that says strictly no?
-    // I'll make the button disabled by passing `onOptOut={null}` or a no-op that alerts.
-
     const handleOptOut = () => {
-        // User confirmed opt-out via modal (which warns about money loss)
-        // Proceed to next step/task
         handleStepComplete();
     };
 
-    // Determine tasks based on choices
-    // Handle both potential structures (string ID or object with selection)
+    // Choices
     const getChoiceId = (choice) => {
         if (!choice) return null;
         if (typeof choice === 'string') return choice;
         if (typeof choice === 'object' && choice.selection) return choice.selection;
         return null;
     };
-
     const matchingChoice = getChoiceId(genuineChoices?.matching) || 'equations';
     const sortingChoice = getChoiceId(genuineChoices?.sorting) || 'letters';
-
     const oppositeSorting = sortingChoice === 'letters' ? 'syllables' : 'letters';
 
-    const getTaskConfig = () => {
-        if (step === 0) {
-            // Task 1: Matching (Same as Genuine)
-            return {
-                type: 'matching',
-                variant: matchingChoice,
-                label: 'Directed Matching Task'
-            };
-        } else if (step === 1) {
-            // Task 2: Sorting (Opposite of Genuine)
-            return {
-                type: 'sorting',
-                variant: oppositeSorting,
-                label: 'Directed Sorting Task'
-            };
-        } else {
-            // Task 3: Dragging PR
-            return {
-                type: 'dragging',
-                variant: 'pr',
-                label: 'Dragging the Circle'
-            };
-        }
-    };
+    const taskConfig = (() => {
+        if (step === 2) return { type: 'matching', variant: matchingChoice, label: 'Matching Task' };
+        if (step === 4) return { type: 'sorting', variant: oppositeSorting, label: 'Sorting Task' };
+        if (step === 6) return { type: 'dragging', variant: 'pr', label: 'Dragging Task' };
+        return {};
+    })();
 
-    if (step === 3) {
-        return <MiniSurvey
-            phase="Coercion"
-            participantId={participantId}
-            onComplete={handleStepComplete}
-        />;
+    if (step === 0) return <InstructionSlide message="You are now going to complete the Orange Condition." onNext={handleStepComplete} />;
+    if (step === 1) return <InstructionSlide message="You are now going to complete a Matching Task." onNext={handleStepComplete} />;
+    if (step === 3) return <InstructionSlide message="You are now going to complete a Sorting Task." onNext={handleStepComplete} />;
+    if (step === 5) return <InstructionSlide message="You are now going to complete a Dragging Task." onNext={handleStepComplete} />;
+
+    if (step === 7) {
+        return <MiniSurvey phase="Coercion" participantId={participantId} onComplete={handleStepComplete} />;
     }
-
-    const taskConfig = getTaskConfig();
 
     return (
         <div className="space-y-4">
@@ -104,7 +75,6 @@ export const CoercionFlow = ({ onNext, participantId, genuineChoices }) => {
 
             <div className="text-center pb-2">
                 <h3 className="text-lg font-semibold text-gray-700">{taskConfig.label}</h3>
-                <p className="text-sm text-gray-500">Task {step + 1} of 3</p>
             </div>
 
             <TaskTrialUI

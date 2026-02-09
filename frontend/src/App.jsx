@@ -6,6 +6,7 @@ import { ConditionTask } from './components/steps/ConditionTask';
 import { GenuineFlow } from './components/steps/genuine/GenuineFlow';
 import { PostSurvey } from './components/steps/PostSurvey';
 import { Payout } from './components/steps/Payout';
+import { PreTrainingFlow } from './components/steps/PreTrainingFlow';
 import { ApparentFlow } from './components/steps/apparent/ApparentFlow';
 import { CoercionFlow } from './components/steps/coercion/CoercionFlow';
 
@@ -16,11 +17,12 @@ import { api } from './services/api';
 const STEP_NAMES = {
   1: 'Consent',
   2: 'Demographics',
-  3: 'Genuine Assent',
-  4: 'Apparent Assent',
-  5: 'Coercion',
-  6: 'Post Survey',
-  7: 'Payout'
+  3: 'Pre-Training',
+  4: 'Genuine Assent',
+  5: 'Apparent Assent',
+  6: 'Coercion',
+  7: 'Post Survey',
+  8: 'Payout'
 };
 
 function App() {
@@ -72,7 +74,7 @@ function App() {
     if (choices && typeof choices === 'object') setGenuineChoices(prev => ({ ...prev, ...choices }));
 
     // Move to next step
-    if (currentStep < 7) {
+    if (currentStep < 8) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
       window.scrollTo(0, 0);
@@ -93,14 +95,16 @@ function App() {
       case 2:
         return <Demographics onNext={handleNext} participantId={participantId} />;
       case 3:
-        return <GenuineFlow onNext={handleNext} participantId={participantId} />;
+        return <PreTrainingFlow onNext={handleNext} participantId={participantId} />;
       case 4:
-        return <ApparentFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
+        return <GenuineFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
       case 5:
-        return <CoercionFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
+        return <ApparentFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
       case 6:
-        return <PostSurvey onNext={handleNext} participantId={participantId} />;
+        return <CoercionFlow onNext={handleNext} participantId={participantId} genuineChoices={genuineChoices} />;
       case 7:
+        return <PostSurvey onNext={handleNext} participantId={participantId} />;
+      case 8:
         return <Payout participantId={participantId} />;
       default:
         return <div>Unknown Step</div>;

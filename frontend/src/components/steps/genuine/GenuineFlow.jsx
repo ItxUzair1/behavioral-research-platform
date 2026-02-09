@@ -1,107 +1,108 @@
 import React, { useState } from 'react';
-import { PreTraining } from './PreTraining';
 import { ChoiceSelection } from './ChoiceSelection';
 import { TaskTrialUI } from './TaskTrialUI';
 import { MiniSurvey } from '../../common/MiniSurvey';
+import { InstructionSlide } from '../../common/InstructionSlide';
 
-export const GenuineFlow = ({ onNext, participantId }) => {
-    // Phases: matching_pt -> matching_choice -> execution -> sorting_pt -> sorting_choice -> dragging_pt -> dragging_choice -> execution(dragging) -> survey -> next
-    const [phase, setPhase] = useState('matching_pt');
-    const [choices, setChoices] = useState({ matching: null, sorting: null, dragging: null });
-    const [executionTask, setExecutionTask] = useState(null);
+export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
+    // New Flow: No choice selection if provided
+    const [phase, setPhase] = useState(() => {
+        if (genuineChoices) return 'execution_matching'; // Start directly
+        return 'instr_matching';
+    });
+
+    const [choices, setChoices] = useState(genuineChoices || { matching: null, sorting: null, dragging: null });
+
+    // State to track current execution task
     const [executionType, setExecutionType] = useState('matching');
 
+    // Helper to get variant from choices
+    const getVariant = (type) => {
+        const choice = choices[type];
+        if (!choice) return null; // Should not happen if pre-trained
+        return typeof choice === 'object' ? choice.selection : choice;
+    };
+
     const handlePhaseComplete = (choiceData) => {
-        if (phase === 'matching_pt') {
+        if (phase === 'instr_matching') {
             setPhase('matching_choice');
         } else if (phase === 'matching_choice') {
             setChoices(prev => ({ ...prev, matching: choiceData }));
-            const selectedVariant = typeof choiceData === 'object' ? choiceData.selection : choiceData;
-            setExecutionTask(selectedVariant || 'equations');
             setExecutionType('matching');
-            setPhase('execution');
-        } else if (phase === 'execution') {
-            if (executionType === 'matching') {
-                setPhase('sorting_pt');
-            } else if (executionType === 'sorting') {
-                setPhase('dragging_pt');
-            } else if (executionType === 'dragging') {
-                setPhase('survey'); // Go to Survey
+            setPhase('execution_matching');
+        } else if (phase === 'execution_matching') {
+            // Next Task
+            if (genuineChoices) {
+                setExecutionType('sorting');
+                setPhase('execution_sorting');
+            } else {
+                setPhase('instr_sorting');
             }
-        } else if (phase === 'sorting_pt') {
+        } else if (phase === 'instr_sorting') {
             setPhase('sorting_choice');
         } else if (phase === 'sorting_choice') {
             setChoices(prev => ({ ...prev, sorting: choiceData }));
-            const selectedVariant = typeof choiceData === 'object' ? choiceData.selection : choiceData;
-            setExecutionTask(selectedVariant || 'letters');
             setExecutionType('sorting');
-            setPhase('execution');
-        } else if (phase === 'dragging_pt') {
+            setPhase('execution_sorting');
+        } else if (phase === 'execution_sorting') {
+            // Next Task
+            if (genuineChoices) {
+                setExecutionType('dragging');
+                setPhase('execution_dragging');
+            } else {
+                setPhase('instr_dragging');
+            }
+        } else if (phase === 'instr_dragging') {
             setPhase('dragging_choice');
         } else if (phase === 'dragging_choice') {
             setChoices(prev => ({ ...prev, dragging: choiceData }));
-            const selectedVariant = typeof choiceData === 'object' ? choiceData.selection : choiceData;
-            setExecutionTask(selectedVariant || 'vr');
             setExecutionType('dragging');
-            setPhase('execution');
+            setPhase('execution_dragging');
+        } else if (phase === 'execution_dragging') {
+            setPhase('survey');
         } else if (phase === 'survey') {
             onNext(null, null, choices);
         }
     };
 
     const handleOptOut = () => {
-        if (phase === 'execution') {
-            if (executionType === 'matching') {
-                setPhase('sorting_pt');
-            } else if (executionType === 'sorting') {
-                setPhase('dragging_pt');
-            } else if (executionType === 'dragging') {
-                setPhase('survey'); // Go to Survey on Opt Out too?? 
-                // Requirement: "mini survey after completion of each condition". 
-                // Opting out of a task effectively ends that task. 
-                // If they opt out of dragging (last task), they finish the condition. So yes, Survey.
-            }
+        if (phase === 'execution_matching') {
+            if (genuineChoices) setPhase('execution_sorting');
+            else setPhase('instr_sorting');
+        } else if (phase === 'execution_sorting') {
+            if (genuineChoices) setPhase('execution_dragging');
+            else setPhase('instr_dragging');
+        } else if (phase === 'execution_dragging') {
+            setPhase('survey');
         } else {
-            if (window.confirm("Are you sure you want to opt out of this task?")) {
+            // Fallback
+            if (window.confirm("Are you sure you want to opt out?")) {
                 handlePhaseComplete();
             }
         }
     };
 
     // --- Configurations ---
-    const MATCHING_TASKS = [
-        { type: 'matching', label: 'Matching Equations', variantId: 'equations' },
-        { type: 'matching', label: 'Matching Mammals', variantId: 'mammals' }
-    ];
     const MATCHING_OPTIONS = [
         { id: 'equations', title: 'Matching Equations', description: 'Match math equations to their answers.' },
         { id: 'mammals', title: 'Matching Mammals', description: 'Match mammal names to their pictures.' }
     ];
 
-    const SORTING_TASKS = [
-        { type: 'sorting', label: 'Sorting Letters', variantId: 'letters' },
-        { type: 'sorting', label: 'Sorting Syllables', variantId: 'syllables' }
-    ];
     const SORTING_OPTIONS = [
         { id: 'letters', title: 'Sorting Letters', description: 'Sort letters into Vowels vs Consonants.' },
         { id: 'syllables', title: 'Sorting Syllables', description: 'Sort words by syllable count.' }
     ];
 
-    const DRAGGING_TASKS = [
-        { type: 'dragging', label: 'Dragging the Square', variantId: 'vr' },
-        { type: 'dragging', label: 'Dragging the Circle', variantId: 'pr' }
-    ];
     const DRAGGING_OPTIONS = [
         { id: 'vr', title: 'Dragging the Square', description: 'Variable Ratio dragging task.' },
         { id: 'pr', title: 'Dragging the Circle', description: 'Progressive Ratio dragging task.' }
     ];
 
     // --- Render ---
-    if (phase === 'matching_pt') {
-        return <PreTraining
-            tasks={MATCHING_TASKS}
-            onComplete={handlePhaseComplete}
-            participantId={participantId}
+    if (phase === 'instr_matching') {
+        return <InstructionSlide
+            message="You are now going to complete a Matching Task."
+            onNext={() => handlePhaseComplete()}
         />;
     }
 
@@ -114,21 +115,44 @@ export const GenuineFlow = ({ onNext, participantId }) => {
         />;
     }
 
-    if (phase === 'execution') {
+    // Execution Phases
+    if (phase === 'execution_matching') {
         return <ExecutionPhase
-            type={executionType}
-            initialVariant={executionTask}
+            key="execution_matching"
+            type="matching"
+            initialVariant={getVariant('matching') || 'equations'}
             onComplete={handlePhaseComplete}
             participantId={participantId}
             onEndTask={handleOptOut}
         />;
     }
 
-    if (phase === 'sorting_pt') {
-        return <PreTraining
-            tasks={SORTING_TASKS}
+    if (phase === 'execution_sorting') {
+        return <ExecutionPhase
+            key="execution_sorting"
+            type="sorting"
+            initialVariant={getVariant('sorting') || 'letters'}
             onComplete={handlePhaseComplete}
             participantId={participantId}
+            onEndTask={handleOptOut}
+        />;
+    }
+
+    if (phase === 'execution_dragging') {
+        return <ExecutionPhase
+            key="execution_dragging"
+            type="dragging"
+            initialVariant={getVariant('dragging') || 'vr'}
+            onComplete={handlePhaseComplete}
+            participantId={participantId}
+            onEndTask={handleOptOut}
+        />;
+    }
+
+    if (phase === 'instr_sorting') {
+        return <InstructionSlide
+            message="You are now going to complete a Sorting Task."
+            onNext={() => handlePhaseComplete()}
         />;
     }
 
@@ -141,11 +165,10 @@ export const GenuineFlow = ({ onNext, participantId }) => {
         />;
     }
 
-    if (phase === 'dragging_pt') {
-        return <PreTraining
-            tasks={DRAGGING_TASKS}
-            onComplete={handlePhaseComplete}
-            participantId={participantId}
+    if (phase === 'instr_dragging') {
+        return <InstructionSlide
+            message="You are now going to complete a Dragging Task."
+            onNext={() => handlePhaseComplete()}
         />;
     }
 
@@ -174,7 +197,6 @@ const ExecutionPhase = ({ type, initialVariant, onComplete, participantId, onEnd
     const [trial, setTrial] = useState(1);
     const [variant, setVariant] = useState(initialVariant);
 
-    // Dynamic Trial Counts: 100 for Matching/Sorting, 200 for Dragging
     const TOTAL_TRIALS = type === 'dragging' ? 200 : 100;
 
     const handleNextTrial = () => {
@@ -193,7 +215,6 @@ const ExecutionPhase = ({ type, initialVariant, onComplete, participantId, onEnd
         } else if (type === 'dragging') {
             setVariant(prev => prev === 'vr' ? 'pr' : 'vr');
         }
-        // Do NOT reset trial count
     };
 
     return (

@@ -202,7 +202,9 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     let dragShapeBg = 'bg-red-600 hover:bg-red-500';
     let dragInnerBg = 'bg-red-800';
 
-    if (phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training')) {
+    if (phase?.toLowerCase().includes('pre-training')) {
+        bgClass = 'bg-gray-200 border-gray-400';
+    } else if (phase?.toLowerCase().includes('genuine')) {
         bgClass = 'bg-green-200 border-green-400';
     } else if (phase?.toLowerCase().includes('apparent')) {
         bgClass = 'bg-purple-200 border-purple-400';

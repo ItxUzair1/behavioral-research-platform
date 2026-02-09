@@ -4,27 +4,28 @@ import { Check } from 'lucide-react';
 const steps = [
     { id: 1, label: 'Consent' },
     { id: 2, label: 'Demographics' },
-    { id: 3, label: 'Condition 1' },
-    { id: 4, label: 'Condition 2' },
-    { id: 5, label: 'Condition 3' },
-    { id: 6, label: 'Survey' },
-    { id: 7, label: 'Payout' },
+    { id: 3, label: 'Pre-Training' },
+    { id: 4, label: 'Condition 1' },
+    { id: 5, label: 'Condition 2' },
+    { id: 6, label: 'Condition 3' },
+    { id: 7, label: 'Survey' },
+    { id: 8, label: 'Payout' },
 ];
 
 export const MainLayout = ({ currentStep, children, participantId, condition }) => {
     const getStepColor = (stepId) => {
-        if (stepId === 3) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-        if (stepId === 4) return 'text-violet-600 bg-violet-50 border-violet-200';
-        if (stepId === 5) return 'text-amber-600 bg-amber-50 border-amber-200';
+        if (stepId === 4) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+        if (stepId === 5) return 'text-violet-600 bg-violet-50 border-violet-200';
+        if (stepId === 6) return 'text-amber-600 bg-amber-50 border-amber-200';
         return 'text-gray-900 bg-gray-50 border-gray-200';
     };
 
     const getProgressColor = (stepId, isActive) => {
         if (!isActive) return 'bg-gray-200 text-gray-400';
         // Special condition colors for active steps
-        if (stepId === 3) return 'bg-emerald-600 text-white shadow-emerald-200';
-        if (stepId === 4) return 'bg-violet-600 text-white shadow-violet-200';
-        if (stepId === 5) return 'bg-amber-600 text-white shadow-amber-200';
+        if (stepId === 4) return 'bg-emerald-600 text-white shadow-emerald-200';
+        if (stepId === 5) return 'bg-violet-600 text-white shadow-violet-200';
+        if (stepId === 6) return 'bg-amber-600 text-white shadow-amber-200';
         return 'bg-gray-900 text-white shadow-gray-200';
     };
 

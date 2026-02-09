@@ -134,14 +134,21 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     };
 
     if (loading) return <div className="p-10 text-center font-mono text-gray-500">Loading Task...</div>;
+    if (!stimulus || !Array.isArray(stimulus.options)) {
+        return <div className="p-10 text-center font-mono text-gray-500">Unable to load stimulus data. Please refresh.</div>;
+    }
 
     // Determine background color based on phase
     let bgClass = 'bg-gray-200'; // Default
-    if (phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training')) {
+    const lowerPhase = phase?.toLowerCase() || '';
+
+    if (lowerPhase.includes('pre-training')) {
+        bgClass = 'bg-gray-200 border-gray-400';
+    } else if (lowerPhase.includes('genuine')) {
         bgClass = 'bg-green-200 border-green-400';
-    } else if (phase?.toLowerCase().includes('apparent')) {
+    } else if (lowerPhase.includes('apparent')) {
         bgClass = 'bg-purple-200 border-purple-400';
-    } else if (phase?.toLowerCase().includes('coercion')) {
+    } else if (lowerPhase.includes('coercion')) {
         bgClass = 'bg-orange-200 border-orange-400';
     }
 
