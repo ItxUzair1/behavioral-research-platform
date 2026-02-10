@@ -28,23 +28,10 @@ const StatefulTaskTrialUI = ({ totalTrials, onComplete, ...props }) => {
 
 export const PreTrainingFlow = ({ onNext, participantId }) => {
     const [stepIndex, setStepIndex] = useState(0);
-    const [preTrainingChoices, setPreTrainingChoices] = useState({});
+
 
     // Configuration for Choices
-    const MATCHING_OPTIONS = [
-        { id: 'equations', title: 'Matching Equations', description: 'Match math equations to their answers.' },
-        { id: 'mammals', title: 'Matching Mammals', description: 'Match mammal names to their pictures.' }
-    ];
 
-    const SORTING_OPTIONS = [
-        { id: 'letters', title: 'Sorting Letters', description: 'Sort letters into Vowels vs Consonants.' },
-        { id: 'syllables', title: 'Sorting Syllables', description: 'Sort words by syllable count.' }
-    ];
-
-    const DRAGGING_OPTIONS = [
-        { id: 'vr', title: 'Dragging the Square', description: 'Variable Ratio dragging task.' },
-        { id: 'pr', title: 'Dragging the Circle', description: 'Progressive Ratio dragging task.' }
-    ];
 
     const STEPS = [
         // 1. Matching
@@ -67,13 +54,7 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             trials: 10
         },
 
-        // 1.5 Matching Choice
-        {
-            type: 'choice',
-            options: MATCHING_OPTIONS,
-            choiceStep: 'matching',
-            label: 'Matching Choice'
-        },
+
 
         // 2. Sorting
         {
@@ -94,13 +75,7 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             label: 'Sorting Syllables (Practice)',
             trials: 10
         },
-        // 2.5 Sorting Choice
-        {
-            type: 'choice',
-            options: SORTING_OPTIONS,
-            choiceStep: 'sorting',
-            label: 'Sorting Choice'
-        },
+
 
         // 3. Dragging
         {
@@ -121,13 +96,7 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             label: 'Dragging (Progressive Ratio Practice)',
             trials: 10
         },
-        // 3.5 Dragging Choice
-        {
-            type: 'choice',
-            options: DRAGGING_OPTIONS,
-            choiceStep: 'dragging',
-            label: 'Dragging Choice'
-        },
+
 
         // 4. Opt-Out Green
         {
@@ -177,26 +146,11 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             // We pass the choices made during pre-training. 
             // NOTE: App.jsx treats these as "genuineChoices". 
             // If the user wants these to overlap, this works perfectly. 
-            onNext(null, null, preTrainingChoices);
+            onNext(null, null, null);
         }
     };
 
-    const handleChoice = (choiceData) => {
-        // choiceData might be string ID or object { selection: '...', ... } depending on ChoiceSelection implementation
-        // ChoiceSelection passes `selectedTask` (string ID) to onConfirm callback 
-        // BUT it also calls API with full payload.
-        // We will store just the ID in local state for now, matching the `GenuineFlow` expectation
-        // which expects simple ID or object.
-        // Let's store what we get.
 
-        const key = currentStep.choiceStep; // 'matching', 'sorting', 'dragging'
-        setPreTrainingChoices(prev => ({
-            ...prev,
-            [key]: choiceData
-        }));
-
-        handleNext();
-    };
 
     if (!currentStep) return null;
 
@@ -235,23 +189,7 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
         );
     }
 
-    if (currentStep.type === 'choice') {
-        return (
-            <div className="space-y-4">
-                <div className="bg-gray-100 border border-gray-300 p-4 rounded-xl mb-6 text-center">
-                    <h2 className="text-xl font-bold text-gray-800 mb-1">Pre-Training Choice</h2>
-                    <p className="text-gray-600">Select which task you prefer</p>
-                </div>
 
-                <ChoiceSelection
-                    options={currentStep.options}
-                    choiceStep={`pretraining_${currentStep.choiceStep}`} // Distinct prefix for API logging if needed
-                    onConfirm={handleChoice}
-                    participantId={participantId}
-                />
-            </div>
-        );
-    }
 
     if (currentStep.type === 'optout') {
         return (

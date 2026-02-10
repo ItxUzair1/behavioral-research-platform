@@ -69,6 +69,15 @@ const ORANGE_THEME = {
     accent: 'border-orange-400'
 };
 
+const GRAY_THEME = {
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    text: 'text-gray-900',
+    icon: 'text-gray-600',
+    button: 'bg-gray-600 hover:bg-gray-700',
+    accent: 'border-gray-400'
+};
+
 export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase = 'Unknown', trialNumber, totalTrials, onComplete, participantId, onOptOut, onSwitch }) => {
     const [complete, setComplete] = useState(false);
     const config = TASK_CONFIG[type];
@@ -79,15 +88,18 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [earnings, setEarnings] = useState(0.00);
 
-    // Determine current theme with override logic for Dragging in Genuine/Pre-Training
+    // Determine current theme
     let currentTheme = config.theme;
-    const isGenuineOrPre = phase?.toLowerCase().includes('genuine') || phase?.toLowerCase().includes('pre-training') || variant === 'Pre-Training';
 
+    const isPreTraining = phase?.toLowerCase().includes('pre-training') || variant === 'Pre-Training';
+    const isGenuine = phase?.toLowerCase().includes('genuine');
     const isApparent = phase?.toLowerCase().includes('apparent');
     const isCoercion = phase?.toLowerCase().includes('coercion');
 
-    if ((type === 'dragging' || type === 'matching') && isGenuineOrPre) {
-        // Reuse Sorting's Green Theme
+    if (isPreTraining) {
+        currentTheme = GRAY_THEME;
+    } else if ((type === 'dragging' || type === 'matching') && isGenuine) {
+        // Reuse Sorting's Green Theme for Genuine
         currentTheme = TASK_CONFIG.sorting.theme;
     } else if (isApparent) {
         currentTheme = PURPLE_THEME;
