@@ -5,33 +5,38 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
     // Stage of the guided tour
     // 0: Start - Highlight 'Opt Out' button
     // 1: Modal Open - Highlight 'Return to Task' button
-    // 2: Explanation 'Return to Task' open
-    // 3: Highlight 'Switch Task' (if applicable)
-    // 4: Explanation 'Switch Task' open
-    // 5: Highlight 'End Task'
-    // 6: Explanation 'End Task' open
+    // 2: Explanation 'Return to Task' open -> "Try it"
+    // 3: Simulation: Back to Task (Modal Closed) - Highlight 'Opt Out' again
+
+    // -- If Genuine --
+    // 5: Modal Open - Highlight 'Switch Task'
+    // 6: Explanation 'Switch Task' open -> "Try it"
+    // 7: Simulation: Switch Task (In-place Screenshot Change) -> "Continue"
+
+    // -- Common --
+    // 8: Modal Open - Highlight 'End Task'
+    // 9: Explanation 'End Task' open -> "Finish"
+
     const [tourStage, setTourStage] = useState(0);
 
     const isGenuine = conditionColor === 'green';
     const isCoercion = conditionColor === 'orange';
-    // const isApparent = conditionColor === 'purple'; // Not strictly needed if logic is just Genuine vs Non-Genuine switch
 
     // Theme Logic
-    // Task Area gets the condition color. Steps/Header remain neutral (white/gray).
     const getTaskTheme = () => {
         switch (conditionColor) {
             case 'green':
                 return {
-                    taskBg: 'bg-green-200', // Matches MatchingGame/SortingGame Genuine
+                    taskBg: 'bg-green-200',
                     taskBorder: 'border-green-400',
                     headerBg: 'bg-white',
                     headerBorder: 'border-gray-200',
                     headerText: 'text-gray-900',
                     textColor: 'text-gray-900'
                 };
-            case 'purple':
+            case 'purple': // Apparent
                 return {
-                    taskBg: 'bg-purple-200', // Matches Apparent condition
+                    taskBg: 'bg-purple-200',
                     taskBorder: 'border-purple-400',
                     headerBg: 'bg-white',
                     headerBorder: 'border-gray-200',
@@ -40,14 +45,14 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                 };
             case 'orange':
                 return {
-                    taskBg: 'bg-orange-200', // Matches Coercion condition
+                    taskBg: 'bg-orange-200',
                     taskBorder: 'border-orange-400',
                     headerBg: 'bg-white',
                     headerBorder: 'border-gray-200',
                     headerText: 'text-gray-900',
                     textColor: 'text-gray-900'
                 };
-            default: // Fallback / Grey
+            default:
                 return {
                     taskBg: 'bg-gray-200',
                     taskBorder: 'border-gray-400',
@@ -61,7 +66,6 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
 
     const theme = getTaskTheme();
 
-    // Modal Theme (Matches OptOutModal)
     const modalTheme = {
         overlay: 'bg-gray-900/40',
         bg: 'bg-white',
@@ -74,10 +78,19 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
         tertiaryBtn: 'bg-gray-100 hover:bg-gray-200 text-gray-800'
     };
 
-
     const handleOptOutClick = () => {
         if (tourStage === 0) {
             setTourStage(1);
+        } else if (tourStage === 3) {
+            // Re-opening modal after "Return to Task" simulation
+            if (isGenuine) {
+                setTourStage(5); // Go to Switch Task
+            } else {
+                setTourStage(8); // Go to End Task
+            }
+        } else if (tourStage === 7) {
+            // Re-opening modal after "Switch Task" simulation
+            setTourStage(8); // Go to End Task
         }
     };
 
@@ -88,50 +101,32 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
     };
 
     const handleSwitchClick = () => {
-        if (tourStage === 3) {
-            setTourStage(4);
-        }
-    };
-
-    const handleEndTaskClick = () => {
         if (tourStage === 5) {
             setTourStage(6);
         }
     };
 
-    const advanceTour = () => {
+    const handleEndTaskClick = () => {
+        if (tourStage === 8) {
+            setTourStage(9);
+        }
+    };
+
+    const handleNextStep = () => {
         if (tourStage === 2) {
-            // If Genuine, go to Switch (3), else skip to End (5)
-            if (isGenuine) setTourStage(3);
-            else setTourStage(5);
-        } else if (tourStage === 4) {
-            setTourStage(5);
+            // Simulate "Back to Task" -> Close modal, go to stage 3
+            setTourStage(3);
         } else if (tourStage === 6) {
+            // Simulate "Switch Task" -> Show screenshot, go to stage 7
+            setTourStage(7);
+        } else if (tourStage === 9) {
             onComplete();
         }
     };
 
-    // Overlay helper to spotlight an element
-    // Since we are building a custom UI, we can just conditionally apply z-index and relative positioning
-    // to the "active" element, and have a fixed overlay behind it.
-    // However, for the Modal buttons, they are inside the modal.
-    // Let's use a simpler approach: A full screen overlay is always present when tourStage > 0.
-    // The Modal sits on top of that.
-    // Inside the Modal, we can use another semi-transparent overlay to dim inactive buttons?
-    // Or just disable them and highlight the active one with a ring/glow.
-    // The prompt asks for "slightly fading out the background except the... button".
 
-    // We can simulate this by having a backdrop that covers everything, and rendering the "active" element
-    // ON TOP of the backdrop.
-    // But moving DOM elements is hard.
-    // Easier: Render the overlay *around* the active element? Hard.
-    // Easiest: Use `box-shadow` on the active element to create a massive dark shadow?
-    // Or just specific styles on the non-active elements to fade them out.
-
-    // Let's try the "dim others" approach.
     const isDimmed = (targetStage) => tourStage !== targetStage;
 
-    // Helper for popup explanation
     const ExplanationPopup = ({ title, text, onNext, buttonText = "Got it", position = "top" }) => (
         <div className={`absolute z-[100] w-64 bg-white p-4 rounded-xl shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200
             ${position === 'top' ? '-top-32 left-1/2 -translate-x-1/2' : ''}
@@ -147,7 +142,6 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
             >
                 {buttonText}
             </button>
-            {/* Arrow */}
             <div className={`absolute w-3 h-3 bg-white border-r border-b border-gray-200 transform rotate-45
                 ${position === 'top' ? '-bottom-1.5 left-1/2 -translate-x-1/2' : ''}
                 ${position === 'bottom' ? '-top-1.5 left-1/2 -translate-x-1/2 border-r-0 border-b-0 border-l border-t' : ''}
@@ -155,7 +149,6 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
         </div>
     );
 
-    // Click Here Indicator
     const ClickIndicator = ({ position = "top" }) => (
         <div className={`absolute z-[90] pointer-events-none flex flex-col items-center animate-bounce
              ${position === 'top' ? '-top-12 left-1/2 -translate-x-1/2' : ''}
@@ -171,27 +164,31 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
 
             {/* Top Instructions */}
             <div className={`bg-white p-8 rounded-2xl shadow-sm border border-gray-200 mb-10 text-center max-w-3xl w-full z-0 transition-opacity duration-300
-                ${tourStage === 0 ? 'opacity-30' : ''}
+                ${(tourStage !== 3 && tourStage !== 7 && tourStage !== 0) ? 'opacity-30' : ''}
             `}>
                 <h2 className={`text-3xl font-bold mb-4 ${theme.textColor}`}>
                     {conditionName} Training
                 </h2>
                 <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-4">
                     <p className="text-xl text-gray-800 font-medium leading-relaxed">
-                        Practice the Opt-Out procedure.
+                        {tourStage === 3
+                            ? "Great! You are back in the task. Now click 'Opt Out' again to explore other options."
+                            : tourStage === 7
+                                ? "Notice the task has switched! Click 'Opt Out' again to proceed."
+                                : "Practice the Opt-Out procedure."}
                     </p>
                 </div>
             </div>
 
             {/* Task Area Card */}
             <div className={`w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border-4 ${theme.taskBorder} relative z-0
-                 ${tourStage === 0 ? 'z-20 ring-4 ring-white' : ''}
+                 ${(tourStage === 0 || tourStage === 3 || tourStage === 7) ? 'z-20 ring-4 ring-white' : ''}
             `}>
 
                 {/* Header */}
                 <div className={`p-6 border-b-2 ${theme.headerBg} ${theme.headerBorder} flex items-center justify-between relative`}>
 
-                    <div className={`flex items-center gap-4 relative z-0 transition-opacity duration-300 ${tourStage === 0 ? 'opacity-30' : ''}`}>
+                    <div className={`flex items-center gap-4 relative z-0 transition-opacity duration-300 ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-30' : ''}`}>
                         <div>
                             <div className="flex items-center gap-3 mb-1">
                                 <h3 className={`text-2xl font-bold ${theme.headerText}`}>Practice Task</h3>
@@ -201,12 +198,12 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                     </div>
 
                     <div className="relative z-20">
-                        {tourStage === 0 && <ClickIndicator position="top" />}
+                        {(tourStage === 0 || tourStage === 3 || tourStage === 7) && <ClickIndicator position="top" />}
                         <button
                             onClick={handleOptOutClick}
-                            disabled={tourStage !== 0}
+                            disabled={tourStage !== 0 && tourStage !== 3 && tourStage !== 7}
                             className={`group flex items-center gap-2 bg-red-50 text-red-700 border-2 border-red-200 px-6 py-3 rounded-xl font-bold transition-all shadow-sm
-                                ${tourStage === 0 ? 'hover:bg-red-100 hover:shadow-md cursor-pointer scale-105 shadow-xl' : 'opacity-50 cursor-default'}
+                                ${(tourStage === 0 || tourStage === 3 || tourStage === 7) ? 'hover:bg-red-100 hover:shadow-md cursor-pointer scale-105 shadow-xl' : 'opacity-50 cursor-default'}
                             `}
                         >
                             <span>Opt Out of Task</span>
@@ -215,25 +212,60 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                 </div>
 
                 {/* Game Area */}
-                <div className={`h-[450px] w-full ${theme.taskBg} flex items-center justify-center relative transition-opacity duration-300 ${tourStage === 0 ? 'opacity-30' : ''}`}>
-                    <div className="text-center opacity-60">
-                        <p className={`text-2xl font-bold uppercase tracking-widest ${theme.headerText} opacity-70`}>
-                            {conditionName} Task Area
-                        </p>
-                    </div>
+                <div className={`h-[450px] w-full ${theme.taskBg} flex items-center justify-center relative overflow-hidden transition-opacity duration-300 ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-30' : ''}`}>
+                    {/* Default View (No Image) */}
+                    {!isGenuine && (
+                        <div className="text-center opacity-60">
+                            <p className={`text-2xl font-bold uppercase tracking-widest ${theme.headerText} opacity-70`}>
+                                {conditionName} Task Area
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Genuine Condition: Show Screenshots */}
+                    {isGenuine && (
+                        <div className="absolute inset-0 w-full h-full">
+                            {/* Matching Mammals (Default) */}
+                            <img
+                                src="/images/matching_mammals.png"
+                                alt="Matching Mammals Task"
+                                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500
+                                    ${tourStage === 7 ? 'opacity-0' : 'opacity-100'}
+                                `}
+                            />
+
+                            {/* Matching Equations (Switched) */}
+                            <img
+                                src="/images/matching_equations.png"
+                                alt="Matching Equations Task"
+                                className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500
+                                    ${tourStage === 7 ? 'opacity-100' : 'opacity-0'}
+                                `}
+                            />
+
+                            {/* Overlay Text for context when not focused */}
+                            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 px-4 py-2 rounded-full backdrop-blur-sm transition-opacity duration-300
+                                ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-0' : 'opacity-100'}
+                             `}>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {tourStage === 7 ? "New Task: Matching Equations" : "Current Task: Matching"}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
 
-            {/* CUSTOM MODAL - REPLICA OF OptOutModal */}
-            {tourStage > 0 && (
+            {/* CUSTOM MODAL */}
+            {(tourStage === 1 || tourStage === 2 || tourStage === 4 || tourStage === 5 || tourStage === 6 || tourStage === 8 || tourStage === 9) && (
                 <div className={`fixed inset-0 z-50 flex items-center justify-center ${modalTheme.overlay} backdrop-blur-sm transition-opacity`}>
 
                     {/* Modal Container */}
                     <div className={`w-full max-w-xl p-6 rounded-2xl shadow-2xl border-2 transform transition-all scale-100 relative ${modalTheme.bg} ${modalTheme.border}`}>
 
                         {/* Overlay to dim non-active parts of modal */}
-                        {(tourStage === 2 || tourStage === 4 || tourStage === 6) && (
+                        {(tourStage === 2 || tourStage === 6 || tourStage === 9) && (
                             <div className="absolute inset-0 bg-black/10 z-10 rounded-2xl pointer-events-none" />
                         )}
 
@@ -275,8 +307,9 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                                     {tourStage === 2 && (
                                         <ExplanationPopup
                                             title="Return to Task"
-                                            text="If you press this button, it will take you back to the task so you can continue working."
-                                            onNext={advanceTour}
+                                            text="The button will take you back to the task."
+                                            onNext={handleNextStep}
+                                            buttonText="Try it"
                                             position="top"
                                         />
                                     )}
@@ -295,21 +328,22 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                                 {/* Switch Task (Genuine Only) */}
                                 {isGenuine && (
                                     <div className="flex-1 relative z-20">
-                                        {tourStage === 3 && <ClickIndicator position="top" />}
-                                        {tourStage === 4 && (
+                                        {tourStage === 5 && <ClickIndicator position="top" />}
+                                        {tourStage === 6 && (
                                             <ExplanationPopup
                                                 title="Switch Task"
-                                                text="If you press this button, you will switch to the other task type immediately."
-                                                onNext={advanceTour}
+                                                text="This button will switch you to the other task type."
+                                                onNext={handleNextStep}
+                                                buttonText="Try it"
                                                 position="top"
                                             />
                                         )}
                                         <button
                                             onClick={handleSwitchClick}
-                                            disabled={tourStage !== 3}
+                                            disabled={tourStage !== 5}
                                             className={`w-full py-3 px-2 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform text-sm ${modalTheme.tertiaryBtn}
-                                                ${tourStage === 3 ? 'z-30 relative ring-4 ring-blue-400 scale-105 shadow-xl cursor-pointer' : 'opacity-40 cursor-default'}
-                                                ${tourStage === 4 ? 'z-30 relative ring-4 ring-blue-400' : ''}
+                                                ${tourStage === 5 ? 'z-30 relative ring-4 ring-blue-400 scale-105 shadow-xl cursor-pointer' : 'opacity-40 cursor-default'}
+                                                ${tourStage === 6 ? 'z-30 relative ring-4 ring-blue-400' : ''}
                                             `}
                                         >
                                             Switch Task
@@ -319,22 +353,22 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
 
                                 {/* End Task */}
                                 <div className="flex-1 relative z-20">
-                                    {tourStage === 5 && <ClickIndicator position="top" />}
-                                    {tourStage === 6 && (
+                                    {tourStage === 8 && <ClickIndicator position="top" />}
+                                    {tourStage === 9 && (
                                         <ExplanationPopup
                                             title="End Task"
-                                            text="If you press this button, you will stop the task completely and move to the next section."
-                                            onNext={advanceTour}
+                                            text="This button checks your progress and finishes the session."
+                                            onNext={handleNextStep}
                                             buttonText="Finish Training"
                                             position="top"
                                         />
                                     )}
                                     <button
                                         onClick={handleEndTaskClick}
-                                        disabled={tourStage !== 5}
+                                        disabled={tourStage !== 8}
                                         className={`w-full py-3 px-2 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-transform text-sm ${modalTheme.primaryBtn}
-                                            ${tourStage === 5 ? 'z-30 relative ring-4 ring-blue-400 scale-105 shadow-xl cursor-pointer' : 'opacity-40 cursor-default'}
-                                            ${tourStage === 6 ? 'z-30 relative ring-4 ring-blue-400' : ''}
+                                            ${tourStage === 8 ? 'z-30 relative ring-4 ring-blue-400 scale-105 shadow-xl cursor-pointer' : 'opacity-40 cursor-default'}
+                                            ${tourStage === 9 ? 'z-30 relative ring-4 ring-blue-400' : ''}
                                         `}
                                     >
                                         End Task
@@ -345,7 +379,6 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
