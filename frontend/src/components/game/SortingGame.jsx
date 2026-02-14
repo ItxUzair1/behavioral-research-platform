@@ -66,9 +66,17 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
     }, [variant]);
 
     const handleDrop = async (item, targetCategory, targetIndex) => {
-        const isCorrect = item.category === targetCategory;
+        let isCorrect = item.category === targetCategory;
         const selectedOptionLabel = `Bin ${targetIndex + 1}`;
         const rt = Math.floor(Math.random() * 500 + 500);
+
+        // --- Deterministic Pre-Training Reward Logic ---
+        // Force success and reward on trial 14 for Pre-Training
+        const isForcedRewardTrial = isPreTraining && displayTrial === 14;
+
+        if (isForcedRewardTrial) {
+            isCorrect = true;
+        }
 
         try {
             const res = await api.submitTaskResult({
@@ -86,12 +94,18 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                 }
                 setInternalTrialCount(res.trialsCompleted);
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
-                    reward: res.reward,
+                    reward: res.reward || isForcedRewardTrial,
                     currentThreshold: res.currentThreshold
                 });
 
-                if (res.reward) {
-                    setRewardData({ amount: res.amount });
+                // Pre-Training: Suppress backend rewards, force only on trial 14
+                let shouldShowReward = res.reward;
+                if (isPreTraining) {
+                    shouldShowReward = isForcedRewardTrial;
+                }
+
+                if (shouldShowReward) {
+                    setRewardData({ amount: res.amount || 0.05 });
                 } else {
                     setTimeout(advanceStimulus, 200); // reduced delay
                 }

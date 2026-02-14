@@ -101,7 +101,16 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             if (idx !== -1) selectedOptionLabel = `Position ${idx + 1}`;
         }
 
-        const isCorrect = droppedOption === stimulus.correctOption;
+        let isCorrect = droppedOption === stimulus.correctOption;
+
+        // --- Deterministic Pre-Training Reward Logic ---
+        // Force success and reward on trial 14 for Pre-Training
+        const isForcedRewardTrial = isPreTraining && displayTrial === 14;
+
+        if (isForcedRewardTrial) {
+            isCorrect = true;
+        }
+
         const rt = Math.floor(Math.random() * 500 + 500);
 
         try {
@@ -120,12 +129,18 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 }
                 setInternalTrialCount(res.trialsCompleted);
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
-                    reward: res.reward,
+                    reward: res.reward || isForcedRewardTrial,
                     currentThreshold: res.currentThreshold
                 });
 
-                if (res.reward) {
-                    setRewardData({ amount: res.amount });
+                // Pre-Training: Suppress backend rewards, force only on trial 14
+                let shouldShowReward = res.reward;
+                if (isPreTraining) {
+                    shouldShowReward = isForcedRewardTrial;
+                }
+
+                if (shouldShowReward) {
+                    setRewardData({ amount: res.amount || 0.05 });
                 } else {
                     setTimeout(advanceStimulus, 200); // reduced delay for speed
                 }

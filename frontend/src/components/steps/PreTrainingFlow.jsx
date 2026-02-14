@@ -44,14 +44,14 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             taskType: 'matching',
             variant: 'equations',
             label: 'Matching Equations (Practice)',
-            trials: 10
+            trials: 15
         },
         {
             type: 'task',
             taskType: 'matching',
             variant: 'mammals',
             label: 'Matching Mammals (Practice)',
-            trials: 10
+            trials: 15
         },
 
 
@@ -66,14 +66,14 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             taskType: 'sorting',
             variant: 'letters',
             label: 'Sorting Letters (Practice)',
-            trials: 10
+            trials: 15
         },
         {
             type: 'task',
             taskType: 'sorting',
             variant: 'syllables',
             label: 'Sorting Syllables (Practice)',
-            trials: 10
+            trials: 15
         },
 
 
@@ -87,14 +87,14 @@ export const PreTrainingFlow = ({ onNext, participantId }) => {
             taskType: 'dragging',
             variant: 'vr',
             label: 'Dragging (Variable Ratio Practice)',
-            trials: 10
+            trials: 15
         },
         {
             type: 'task',
             taskType: 'dragging',
             variant: 'pr',
             label: 'Dragging (Progressive Ratio Practice)',
-            trials: 10
+            trials: 15
         },
 
 

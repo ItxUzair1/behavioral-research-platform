@@ -21,6 +21,7 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
 
     const isGenuine = conditionColor === 'green';
     const isCoercion = conditionColor === 'orange';
+    const isApparent = conditionColor === 'purple';
 
     // Theme Logic
     const getTaskTheme = () => {
@@ -214,7 +215,7 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                 {/* Game Area */}
                 <div className={`h-[450px] w-full ${theme.taskBg} flex items-center justify-center relative overflow-hidden transition-opacity duration-300 ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-30' : ''}`}>
                     {/* Default View (No Image) */}
-                    {!isGenuine && (
+                    {!isGenuine && !isApparent && !isCoercion && (
                         <div className="text-center opacity-60">
                             <p className={`text-2xl font-bold uppercase tracking-widest ${theme.headerText} opacity-70`}>
                                 {conditionName} Task Area
@@ -250,6 +251,38 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                                 <p className="text-sm font-bold text-gray-800">
                                     {tourStage === 7 ? "New Task: Matching Equations" : "Current Task: Matching"}
                                 </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Apparent (Purple) Condition */}
+                    {isApparent && (
+                        <div className="absolute inset-0 w-full h-full">
+                            <img
+                                src="/images/purple_mammals.png"
+                                alt="Apparent Condition Task"
+                                className="absolute inset-0 w-full h-full object-contain"
+                            />
+                            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 px-4 py-2 rounded-full backdrop-blur-sm transition-opacity duration-300
+                                ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-0' : 'opacity-100'}
+                             `}>
+                                <p className="text-sm font-bold text-gray-800">Current Task: Matching</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Coercion (Orange) Condition */}
+                    {isCoercion && (
+                        <div className="absolute inset-0 w-full h-full">
+                            <img
+                                src="/images/orange_mammals.png"
+                                alt="Coercion Condition Task"
+                                className="absolute inset-0 w-full h-full object-contain"
+                            />
+                            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 px-4 py-2 rounded-full backdrop-blur-sm transition-opacity duration-300
+                                ${(tourStage !== 0 && tourStage !== 3 && tourStage !== 7) ? 'opacity-0' : 'opacity-100'}
+                             `}>
+                                <p className="text-sm font-bold text-gray-800">Current Task: Matching</p>
                             </div>
                         </div>
                     )}
@@ -357,7 +390,10 @@ export const OptOutTraining = ({ conditionColor, conditionName, onComplete }) =>
                                     {tourStage === 9 && (
                                         <ExplanationPopup
                                             title="End Task"
-                                            text="This button checks your progress and finishes the session."
+                                            text={isCoercion
+                                                ? "Pressing this button will lose all the money earned in this task and finish the task."
+                                                : "This button will let you keep all your money and finish the task."
+                                            }
                                             onNext={handleNextStep}
                                             buttonText="Finish Training"
                                             position="top"

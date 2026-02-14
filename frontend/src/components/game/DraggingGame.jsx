@@ -136,6 +136,15 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
 
     const handleSubmit = async (isCorrect) => {
         const rt = Math.floor(Math.random() * 500 + 500); // Mock RT
+
+        // --- Deterministic Pre-Training Reward Logic ---
+        // For Variable Ratio (vr) in Pre-Training, force success and reward on trial 14.
+        const isForcedRewardTrial = isPreTraining && displayTrial === 14 && variant === 'vr';
+
+        if (isForcedRewardTrial) {
+            isCorrect = true; // Force success
+        }
+
         const selectedOptionLabel = isCorrect ? "Target Reached" : "Incomplete Drag";
 
         // Temporary success state to lock UI or animate
@@ -161,13 +170,20 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
 
                 // Log with authoritative data
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
-                    reward: res.reward,
+                    reward: res.reward || isForcedRewardTrial, // Force reward flag for logging if needed
                     currentThreshold: res.currentThreshold
                 });
 
-                // Handle Reward Modal - Show regardless of phase if triggered
-                if (res.reward) {
-                    setRewardData({ amount: res.amount });
+                // Handle Reward Display Logic
+                let shouldShowReward = res.reward;
+
+                // Pre-Training Override for VR: Suppress backend rewards, force only on trial 14
+                if (isPreTraining && variant === 'vr') {
+                    shouldShowReward = isForcedRewardTrial;
+                }
+
+                if (shouldShowReward) {
+                    setRewardData({ amount: res.amount || 0.05 }); // Use API amount or fallback
                     // If reward, we wait for modal close to reset
                 } else {
                     // No reward, reset immediately

@@ -3,12 +3,12 @@ const Participant = require('../models/Participant');
 // Constants
 const MAX_EARNINGS = 5.00;
 const REWARD_AMOUNT = 0.05;
-const VR_MEAN = 4;
+const VR_MEAN = 14;
 const MAX_TRIALS = 200;
 
-// Bag of numbers that averages to EXACTLY 4.0
-// Sum = 44, Count = 11, Mean = 4.0
-const VR_POOL = [1, 7, 2, 6, 3, 5, 4, 4, 8, 2, 2];
+// Bag of numbers that averages to EXACTLY 14.0
+// Range: 10-18, Sum: 126, Count: 9, Mean: 14.0
+const VR_POOL = [10, 18, 11, 17, 12, 16, 13, 15, 14];
 
 /**
  * Generates a Variable Ratio schedule averaging VR_MEAN using a balanced pool
@@ -106,6 +106,16 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
         state.schedule = generateVRSchedule();
     }
 
+    // Hotfix: Check for legacy schedule (values &lt; 10) and regenerate
+    // Exclude PR tasks which don't use the schedule values
+    const isPR = (taskType === 'dragging' && variant === 'pr');
+    if (!isPR && state.schedule && state.schedule.some(v => v < 10)) {
+        console.log(`[Hotfix] Regenerating legacy schedule for ${participantId} - ${taskKey}`);
+        state.schedule = generateVRSchedule();
+        state.scheduleIndex = 0;
+        state.correctCount = 0;
+    }
+
     // 2. Update Counts
     state.trialsCompleted += 1;
     trialsCompleted = state.trialsCompleted;
@@ -121,7 +131,8 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
         // Check threshold
         let currentThreshold;
         if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
-            currentThreshold = Math.pow(2, state.scheduleIndex);
+            // New PR Logic: 2, 4, 6, 8, 10... (Arithmetic Progression)
+            currentThreshold = (state.scheduleIndex + 1) * 2;
         } else {
             currentThreshold = state.schedule[state.scheduleIndex];
         }
@@ -191,10 +202,12 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
         const s = participant.reinforcementState[taskKey];
         if (taskType.toLowerCase() === 'dragging' && variant === 'pr') {
             // If we just advanced (rewardEarned), the threshold that triggered it was index-1
+            // Use new arithmetic logic: (index + 1) * 2
             if (rewardEarned) {
-                loggedThreshold = Math.pow(2, Math.max(0, s.scheduleIndex - 1));
+                const prevIndex = Math.max(0, s.scheduleIndex - 1);
+                loggedThreshold = (prevIndex + 1) * 2;
             } else {
-                loggedThreshold = Math.pow(2, s.scheduleIndex);
+                loggedThreshold = (s.scheduleIndex + 1) * 2;
             }
         } else if (s.schedule.length > 0) {
             if (rewardEarned) {
