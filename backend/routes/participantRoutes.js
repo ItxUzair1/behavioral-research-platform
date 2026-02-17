@@ -6,5 +6,6 @@ router.post('/', controller.createParticipant);
 router.get('/:participantId', controller.getParticipant);
 router.patch('/:participantId', controller.updateParticipant);
 router.post('/:participantId/payout', controller.submitPayoutDetails);
+router.post('/validate', controller.validateParticipant);
 
 module.exports = router;

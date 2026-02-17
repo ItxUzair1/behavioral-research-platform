@@ -34,7 +34,25 @@ export const ChoiceSelection = ({ options = [], choiceStep, onConfirm, participa
                     // We do NOT update currentStep here, as we might move to next pre-training phase
                 };
 
+                // 1. Update Participant State (Legacy/Current Step Logic)
                 await api.updateParticipant(participantId, updatePayload);
+
+                // 2. Log Event for Daily Metrics
+                // Derive task category from choiceStep ("matching_choice" → "Matching")
+                const taskCategory = choiceStep ? choiceStep.replace('_choice', '') : 'unknown';
+                const capitalizedCategory = taskCategory.charAt(0).toUpperCase() + taskCategory.slice(1);
+
+                await api.logTrial({
+                    participantId,
+                    taskType: 'ChoiceTask',
+                    phase: capitalizedCategory, // "Matching", "Sorting", or "Dragging"
+                    eventType: 'Choice',
+                    selectedOption: selectedTask,
+                    responseTime: timer * 1000, // Convert to ms
+                    trialNumber: 0,
+                    correct: true
+                });
+
                 onConfirm(selectedTask);
             } catch (error) {
                 console.error("Choice Save Error:", error);

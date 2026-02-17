@@ -4,14 +4,12 @@ import { TaskTrialUI } from './TaskTrialUI';
 import { MiniSurvey } from '../../common/MiniSurvey';
 import { InstructionSlide } from '../../common/InstructionSlide';
 
-export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
-    // New Flow: No choice selection if provided
-    const [phase, setPhase] = useState(() => {
-        if (genuineChoices) return 'execution_matching'; // Start directly
-        return 'instr_matching';
-    });
+export const GenuineFlow = ({ onNext, participantId, genuineChoices, daysCompleted }) => {
+    // Every day: instruction → choice → execution for each task (matching, sorting, dragging)
+    // Choices are always made fresh, even on Day 2+
+    const [phase, setPhase] = useState('instr_matching');
 
-    const [choices, setChoices] = useState(genuineChoices || { matching: null, sorting: null, dragging: null });
+    const [choices, setChoices] = useState({ matching: null, sorting: null, dragging: null });
 
     // State to track current execution task
     const [executionType, setExecutionType] = useState('matching');
@@ -31,13 +29,7 @@ export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
             setExecutionType('matching');
             setPhase('execution_matching');
         } else if (phase === 'execution_matching') {
-            // Next Task
-            if (genuineChoices) {
-                setExecutionType('sorting');
-                setPhase('execution_sorting');
-            } else {
-                setPhase('instr_sorting');
-            }
+            setPhase('instr_sorting');
         } else if (phase === 'instr_sorting') {
             setPhase('sorting_choice');
         } else if (phase === 'sorting_choice') {
@@ -45,13 +37,7 @@ export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
             setExecutionType('sorting');
             setPhase('execution_sorting');
         } else if (phase === 'execution_sorting') {
-            // Next Task
-            if (genuineChoices) {
-                setExecutionType('dragging');
-                setPhase('execution_dragging');
-            } else {
-                setPhase('instr_dragging');
-            }
+            setPhase('instr_dragging');
         } else if (phase === 'instr_dragging') {
             setPhase('dragging_choice');
         } else if (phase === 'dragging_choice') {
@@ -59,7 +45,12 @@ export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
             setExecutionType('dragging');
             setPhase('execution_dragging');
         } else if (phase === 'execution_dragging') {
-            setPhase('survey');
+            if (!daysCompleted || daysCompleted === 0) {
+                onNext(null, null, choices);
+            } else {
+                setPhase('survey');
+            }
+
         } else if (phase === 'survey') {
             onNext(null, null, choices);
         }
@@ -67,13 +58,16 @@ export const GenuineFlow = ({ onNext, participantId, genuineChoices }) => {
 
     const handleOptOut = () => {
         if (phase === 'execution_matching') {
-            if (genuineChoices) setPhase('execution_sorting');
-            else setPhase('instr_sorting');
+            setPhase('instr_sorting');
         } else if (phase === 'execution_sorting') {
-            if (genuineChoices) setPhase('execution_dragging');
-            else setPhase('instr_dragging');
+            setPhase('instr_dragging');
         } else if (phase === 'execution_dragging') {
-            setPhase('survey');
+            console.log("GenuineFlow OptOut daysCompleted:", daysCompleted);
+            if (!daysCompleted || daysCompleted === 0) {
+                onNext(null, null, choices);
+            } else {
+                setPhase('survey');
+            }
         } else {
             // Fallback
             if (window.confirm("Are you sure you want to opt out?")) {

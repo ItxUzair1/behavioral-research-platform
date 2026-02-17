@@ -1,4 +1,5 @@
 const TrialLog = require('../models/TrialLog');
+const Participant = require('../models/Participant');
 
 exports.logTrial = async (req, res) => {
     try {
@@ -23,6 +24,10 @@ exports.logTrial = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
+        // Look up the participant's current day number
+        const participantDoc = await Participant.findOne({ participantId });
+        const currentDayNumber = participantDoc ? (participantDoc.days_completed || 0) + 1 : 1;
+
         const newTrial = new TrialLog({
             participantId,
             taskType,
@@ -35,6 +40,7 @@ exports.logTrial = async (req, res) => {
             eventType: eventType || "Trial",
             reinforcementDelivered: reinforcementDelivered || false,
             scheduleRequirement: scheduleRequirement || 0,
+            dayNumber: currentDayNumber,
             context: {
                 ...(context || {}),
                 reinforcersDelivered: reinforcementDelivered ? 1 : 0
@@ -44,13 +50,12 @@ exports.logTrial = async (req, res) => {
         // REMOVED: Duplicate Reward Processing logic. use taskController for that.
 
         if (reinforcementDelivered) {
-            console.log(`$$$ Reward Logged: ${participantId} | ${taskType}`);
+            console.log(`$$$ Reward Logged: ${participantId} | ${taskType} | Day ${currentDayNumber}`);
         }
 
         await newTrial.save();
 
         // --- earning logic ---
-        const Participant = require('../models/Participant');
         const REWARD_AMOUNT = 0.05;
 
         // Special Logic: Coercion Opt-Out Penalty (Complete Loss)
@@ -137,13 +142,14 @@ exports.logTrial = async (req, res) => {
         // If opting out of Coercion, remove ALL earnings accumulated in this specific task.
         if (eventType === 'OptOut' && phase && phase.toLowerCase().includes('coercion')) {
             try {
-                // Count rewards specifically for this participant + phase + taskType
-                // This ensures we only deduct what was earned in *this* specific attempt (Current Task)
+                // Count rewards specifically for this participant + phase + taskType + current day
+                // This ensures we only deduct what was earned in *today's* session, not previous days
                 const rewards = await TrialLog.countDocuments({
                     participantId,
                     phase: phase, // e.g. "Coercion"
                     taskType: taskType, // e.g. "matching", "sorting", or "dragging"
-                    reinforcementDelivered: true
+                    reinforcementDelivered: true,
+                    dayNumber: currentDayNumber // Only count rewards from the same day
                 });
 
                 const deduction = rewards * REWARD_AMOUNT;
@@ -178,9 +184,10 @@ exports.logTrial = async (req, res) => {
 
         // JUST READ EARNINGS, DO NOT INCREMENT. 
         // Reward logic is handled by taskController/rewardService via submitTaskResult.
-        const participant = await Participant.findOne({ participantId });
-        if (participant) {
-            currentEarnings = participant.earnings || 0;
+        // Re-fetch participant to get latest earnings (may have been modified by penalty logic above)
+        const latestParticipant = await Participant.findOne({ participantId });
+        if (latestParticipant) {
+            currentEarnings = latestParticipant.earnings || 0;
         }
 
         res.status(201).json({

@@ -16,17 +16,18 @@ exports.login = (req, res) => {
 exports.getParticipants = async (req, res) => {
     try {
         const participants = await Participant.find({})
-            .select('participantId conditionOrder currentStep timestamps earnings payoutInfo')
+            .select('participantId conditionOrder currentStep timestamps earnings payoutInfo days_completed study_complete')
             .sort({ 'timestamps.studyCompleted': -1, 'timestamps.consentGiven': -1 });
 
         const formatted = participants.map(p => ({
             participantId: p.participantId,
-            status: p.currentStep === 'Payout' ? 'Completed' : 'In Progress',
+            status: p.study_complete ? 'Completed' : 'In Progress',
             currentStep: p.currentStep,
             conditionOrder: p.conditionOrder.join(', '),
             completedAt: p.timestamps.studyCompleted ? p.timestamps.studyCompleted.toISOString() : null,
             startedAt: p.timestamps.consentGiven ? p.timestamps.consentGiven.toISOString() : null,
             earnings: p.earnings,
+            daysCompleted: p.days_completed || 0,
             payoutInfo: p.payoutInfo // Include payout details
         }));
 
@@ -45,16 +46,11 @@ function getParticipantSummary(p, metrics) {
     const safeDate = (d) => d ? new Date(d).toISOString() : '';
     const safeJoin = (arr, sep = '|') => Array.isArray(arr) ? arr.join(sep) : '';
 
-    // Base Summary
+    // Base Summary (Static participant data - same across all days)
     const summary = {
-        _id: p._id.toString(),
         participantId: p.participantId,
         conditionOrder: safeJoin(p.conditionOrder, '-'),
-        currentStep: p.currentStep,
-        choiceTask: p.choiceTask || '',
-        earnings: p.earnings,
         createdAt: safeDate(p.createdAt),
-        updatedAt: safeDate(p.updatedAt),
 
         // Timestamps
         'timestamps_consentGiven': safeDate(p.timestamps?.consentGiven),
@@ -69,65 +65,69 @@ function getParticipantSummary(p, metrics) {
         'edu_level': p.demographics?.education_level || '',
         'socio_status': p.demographics?.socioeconomic_status || '',
 
-        // Genuine Choices
-        'genuine_choices_matching_selection': p.genuine_choices?.matching_choice?.selection || '',
-        'genuine_choices_matching_latency': p.genuine_choices?.matching_choice?.latency || '',
-        'genuine_choices_matching_timestamp': safeDate(p.genuine_choices?.matching_choice?.timestamp),
+        // Genuine Choices - Daily (Calculated from metrics)
+        // Keys: choicetask_matching, choicetask_sorting, choicetask_dragging
+        'genuine_choices_matching_selection': metrics?.choicetask_matching?.lastChoiceSelection || '',
+        'genuine_choices_matching_latency': metrics?.choicetask_matching?.lastChoiceLatency || '',
+        'genuine_choices_matching_timestamp': safeDate(metrics?.choicetask_matching?.lastChoiceTimestamp),
 
-        'genuine_choices_sorting_selection': p.genuine_choices?.sorting_choice?.selection || '',
-        'genuine_choices_sorting_latency': p.genuine_choices?.sorting_choice?.latency || '',
-        'genuine_choices_sorting_timestamp': safeDate(p.genuine_choices?.sorting_choice?.timestamp),
+        'genuine_choices_sorting_selection': metrics?.choicetask_sorting?.lastChoiceSelection || '',
+        'genuine_choices_sorting_latency': metrics?.choicetask_sorting?.lastChoiceLatency || '',
+        'genuine_choices_sorting_timestamp': safeDate(metrics?.choicetask_sorting?.lastChoiceTimestamp),
 
-        'genuine_choices_dragging_selection': p.genuine_choices?.dragging_choice?.selection || '',
-        'genuine_choices_dragging_latency': p.genuine_choices?.dragging_choice?.latency || '',
-        'genuine_choices_dragging_timestamp': safeDate(p.genuine_choices?.dragging_choice?.timestamp),
+        'genuine_choices_dragging_selection': metrics?.choicetask_dragging?.lastChoiceSelection || '',
+        'genuine_choices_dragging_latency': metrics?.choicetask_dragging?.lastChoiceLatency || '',
+        'genuine_choices_dragging_timestamp': safeDate(metrics?.choicetask_dragging?.lastChoiceTimestamp),
 
-        // Earnings By Task
-        'earningsByTask_matching_genuine': p.earningsByTask?.matching_genuine || 0,
-        'earningsByTask_sorting_genuine': p.earningsByTask?.sorting_genuine || 0,
-        'earningsByTask_dragging_genuine': p.earningsByTask?.dragging_genuine || 0,
-        'earningsByTask_matching_apparent': p.earningsByTask?.matching_apparent || 0,
-        'earningsByTask_sorting_apparent': p.earningsByTask?.sorting_apparent || 0,
-        'earningsByTask_dragging_apparent': p.earningsByTask?.dragging_apparent || 0,
-        'earningsByTask_matching_coercion': p.earningsByTask?.matching_coercion || 0,
-        'earningsByTask_sorting_coercion': p.earningsByTask?.sorting_coercion || 0,
-        'earningsByTask_dragging_coercion': p.earningsByTask?.dragging_coercion || 0,
+        // Earnings By Task - Daily (Calculated from metrics)
+        // If metrics object is provided, use it. Otherwise 0.
+        // For coercion: if participant opted out, ALL earnings for that task are forfeited
+        'earningsByTask_matching_genuine': metrics?.matching_genuine ? (metrics.matching_genuine.reinforcerCount * 0.05) : 0,
+        'earningsByTask_sorting_genuine': metrics?.sorting_genuine ? (metrics.sorting_genuine.reinforcerCount * 0.05) : 0,
+        'earningsByTask_dragging_genuine': metrics?.dragging_genuine ? (metrics.dragging_genuine.reinforcerCount * 0.05) : 0,
+        'earningsByTask_matching_apparent': metrics?.matching_apparent ? (metrics.matching_apparent.reinforcerCount * 0.05) : 0,
+        'earningsByTask_sorting_apparent': metrics?.sorting_apparent ? (metrics.sorting_apparent.reinforcerCount * 0.05) : 0,
+        'earningsByTask_dragging_apparent': metrics?.dragging_apparent ? (metrics.dragging_apparent.reinforcerCount * 0.05) : 0,
+        'earningsByTask_matching_coercion': (metrics?.matching_coercion && !metrics.matching_coercion.optOutCount) ? (metrics.matching_coercion.reinforcerCount * 0.05) : 0,
+        'earningsByTask_sorting_coercion': (metrics?.sorting_coercion && !metrics.sorting_coercion.optOutCount) ? (metrics.sorting_coercion.reinforcerCount * 0.05) : 0,
+        'earningsByTask_dragging_coercion': (metrics?.dragging_coercion && !metrics.dragging_coercion.optOutCount) ? (metrics.dragging_coercion.reinforcerCount * 0.05) : 0,
 
-        // OptOut Stats - specific flattened structure as requested
-        'matching_genuine_Opt-Out Latency': p.optOutStats?.matching_genuine?.latency || '',
-        'matching_genuine_Opt-Out Count': p.optOutStats?.matching_genuine?.count || 0,
+        // OptOut Stats - Daily (Calculated from metrics)
+        'matching_genuine_Opt-Out Latency': metrics?.matching_genuine?.avgOptOutLatency || 0,
+        'matching_genuine_Opt-Out Count': metrics?.matching_genuine?.optOutCount || 0,
 
-        'sorting_genuine_Opt-Out Latency': p.optOutStats?.sorting_genuine?.latency || '',
-        'sorting_genuine_Opt-Out Count': p.optOutStats?.sorting_genuine?.count || 0,
+        'sorting_genuine_Opt-Out Latency': metrics?.sorting_genuine?.avgOptOutLatency || 0,
+        'sorting_genuine_Opt-Out Count': metrics?.sorting_genuine?.optOutCount || 0,
 
-        'dragging_genuine_Opt-Out Latency': p.optOutStats?.dragging_genuine?.latency || '',
-        'dragging_genuine_Opt-Out Count': p.optOutStats?.dragging_genuine?.count || 0,
+        'dragging_genuine_Opt-Out Latency': metrics?.dragging_genuine?.avgOptOutLatency || 0,
+        'dragging_genuine_Opt-Out Count': metrics?.dragging_genuine?.optOutCount || 0,
 
-        'matching_apparent_Opt-Out Latency': p.optOutStats?.matching_apparent?.latency || '',
-        'matching_apparent_Opt-Out Count': p.optOutStats?.matching_apparent?.count || 0,
+        'matching_apparent_Opt-Out Latency': metrics?.matching_apparent?.avgOptOutLatency || 0,
+        'matching_apparent_Opt-Out Count': metrics?.matching_apparent?.optOutCount || 0,
 
-        'sorting_apparent_Opt-Out Latency': p.optOutStats?.sorting_apparent?.latency || '',
-        'sorting_apparent_Opt-Out Count': p.optOutStats?.sorting_apparent?.count || 0,
+        'sorting_apparent_Opt-Out Latency': metrics?.sorting_apparent?.avgOptOutLatency || 0,
+        'sorting_apparent_Opt-Out Count': metrics?.sorting_apparent?.optOutCount || 0,
 
-        'dragging_apparent_Opt-Out Latency': p.optOutStats?.dragging_apparent?.latency || '',
-        'dragging_apparent_Opt-Out Count': p.optOutStats?.dragging_apparent?.count || 0,
+        'dragging_apparent_Opt-Out Latency': metrics?.dragging_apparent?.avgOptOutLatency || 0,
+        'dragging_apparent_Opt-Out Count': metrics?.dragging_apparent?.optOutCount || 0,
 
-        'matching_coercion_Opt-Out Latency': p.optOutStats?.matching_coercion?.latency || '',
-        'matching_coercion_Opt-Out Count': p.optOutStats?.matching_coercion?.count || 0,
+        'matching_coercion_Opt-Out Latency': metrics?.matching_coercion?.avgOptOutLatency || 0,
+        'matching_coercion_Opt-Out Count': metrics?.matching_coercion?.optOutCount || 0,
 
-        'sorting_coercion_Opt-Out Latency': p.optOutStats?.sorting_coercion?.latency || '',
-        'sorting_coercion_Opt-Out Count': p.optOutStats?.sorting_coercion?.count || 0,
+        'sorting_coercion_Opt-Out Latency': metrics?.sorting_coercion?.avgOptOutLatency || 0,
+        'sorting_coercion_Opt-Out Count': metrics?.sorting_coercion?.optOutCount || 0,
 
-        'dragging_coercion_Opt-Out Latency': p.optOutStats?.dragging_coercion?.latency || '',
-        'dragging_coercion_Opt-Out Count': p.optOutStats?.dragging_coercion?.count || 0,
+        'dragging_coercion_Opt-Out Latency': metrics?.dragging_coercion?.avgOptOutLatency || 0,
+        'dragging_coercion_Opt-Out Count': metrics?.dragging_coercion?.optOutCount || 0,
 
-        // Mini Surveys
-        'miniSurveys_genuine_rating': p.miniSurveys?.genuine?.rating || '',
-        'miniSurveys_genuine_timestamp': safeDate(p.miniSurveys?.genuine?.timestamp),
-        'miniSurveys_apparent_rating': p.miniSurveys?.apparent?.rating || '',
-        'miniSurveys_apparent_timestamp': safeDate(p.miniSurveys?.apparent?.timestamp),
-        'miniSurveys_coercion_rating': p.miniSurveys?.coercion?.rating || '',
-        'miniSurveys_coercion_timestamp': safeDate(p.miniSurveys?.coercion?.timestamp),
+        // Mini Surveys - Daily (Calculated from metrics)
+        // Keys: minisurvey_genuine, minisurvey_apparent, minisurvey_coercion
+        'miniSurveys_genuine_rating': metrics?.minisurvey_genuine?.surveyRating || '',
+        'miniSurveys_genuine_timestamp': safeDate(metrics?.minisurvey_genuine?.surveyTimestamp),
+        'miniSurveys_apparent_rating': metrics?.minisurvey_apparent?.surveyRating || '',
+        'miniSurveys_apparent_timestamp': safeDate(metrics?.minisurvey_apparent?.surveyTimestamp),
+        'miniSurveys_coercion_rating': metrics?.minisurvey_coercion?.surveyRating || '',
+        'miniSurveys_coercion_timestamp': safeDate(metrics?.minisurvey_coercion?.surveyTimestamp),
 
         // Post Survey
         'postSurvey_emotionalResponse_genuine': p.postSurvey?.emotionalResponse?.genuine || '',
@@ -139,26 +139,40 @@ function getParticipantSummary(p, metrics) {
         'postSurvey_timestamp': safeDate(p.postSurvey?.timestamp),
 
 
-        // Switch Task Stats
-        'matching_genuine_Switch-Task Latency': p.switchTaskStats?.matching_genuine?.latency || '',
-        'matching_genuine_Switch-Task Count': p.switchTaskStats?.matching_genuine?.count || 0,
+        // Switch Task Stats - Daily (Calculated from metrics)
+        // Key: switchTaskStats are usually tracked under genuine phase
+        'matching_genuine_Switch-Task Latency': metrics?.matching_genuine?.switchLatencySum ? (metrics.matching_genuine.switchLatencySum / metrics.matching_genuine.switchCount).toFixed(2) : 0,
+        'matching_genuine_Switch-Task Count': metrics?.matching_genuine?.switchCount || 0,
 
-        'sorting_genuine_Switch-Task Latency': p.switchTaskStats?.sorting_genuine?.latency || '',
-        'sorting_genuine_Switch-Task Count': p.switchTaskStats?.sorting_genuine?.count || 0,
+        'sorting_genuine_Switch-Task Latency': metrics?.sorting_genuine?.switchLatencySum ? (metrics.sorting_genuine.switchLatencySum / metrics.sorting_genuine.switchCount).toFixed(2) : 0,
+        'sorting_genuine_Switch-Task Count': metrics?.sorting_genuine?.switchCount || 0,
 
-        'dragging_genuine_Switch-Task Latency': p.switchTaskStats?.dragging_genuine?.latency || '',
-        'dragging_genuine_Switch-Task Count': p.switchTaskStats?.dragging_genuine?.count || 0,
+        'dragging_genuine_Switch-Task Latency': metrics?.dragging_genuine?.switchLatencySum ? (metrics.dragging_genuine.switchLatencySum / metrics.dragging_genuine.switchCount).toFixed(2) : 0,
+        'dragging_genuine_Switch-Task Count': metrics?.dragging_genuine?.switchCount || 0,
 
     };
 
     // Flatten Metrics
-    // metrics is an object like { 'matching_genuine pre-training': { ... }, ... }
+    // metrics is an object like { 'matching_genuine': { ... }, ... }
     // We want to flatten this into 'trialMetrics_{key}_{subKey}'
+    // Skip keys already handled explicitly above
+    const skipSubKeys = new Set([
+        'optOutCount', 'optOutLatencySum', 'avgOptOutLatency',   // Already in Opt-Out columns
+        'switchCount', 'switchLatencySum',                       // Already in Switch-Task columns
+        'lastChoiceSelection', 'lastChoiceLatency', 'lastChoiceTimestamp', // Already in genuine_choices columns
+        'surveyRating', 'surveyTimestamp',                       // Already in miniSurveys columns
+        'task', 'phase',                                         // Internal grouping fields, not useful data
+        'startTime', 'endTime'                                   // Raw timestamps, durationMinutes is already computed
+    ]);
+
     if (metrics) {
         Object.keys(metrics).forEach(metricKey => {
+            // Skip ChoiceTask and MiniSurvey — their data is already in explicit columns above
+            if (metricKey.startsWith('choicetask') || metricKey.startsWith('minisurvey')) return;
             const metricData = metrics[metricKey];
             if (typeof metricData === 'object' && metricData !== null) {
                 Object.keys(metricData).forEach(subKey => {
+                    if (skipSubKeys.has(subKey)) return; // Already mapped explicitly
                     const header = `trialMetrics_${metricKey}_${subKey}`;
                     summary[header] = metricData[subKey];
                 });
@@ -175,9 +189,36 @@ exports.getFullExport = async (req, res) => {
         const data = [];
 
         for (const p of participants) {
-            const metrics = await metricsService.calculateMetrics(p.participantId);
-            const flat = getParticipantSummary(p, metrics);
-            data.push(flat);
+            // Get Daily Metrics (Array of Days)
+            const dailyData = await metricsService.calculateDailyMetrics(p.participantId);
+
+            if (dailyData.length > 0) {
+                // Create a row for EACH Day with cumulative earnings
+                let cumulativeEarnings = 0;
+
+                dailyData.forEach(day => {
+                    cumulativeEarnings += day.dailyEarnings;
+
+                    const flat = getParticipantSummary(p, day.metrics);
+                    // Add Daily specific fields at the top of the row
+                    flat['Day Number'] = day.dayNumber;
+                    flat['Date'] = day.date;
+                    flat['Daily Earnings'] = day.dailyEarnings;
+                    flat['Total Earnings'] = parseFloat(cumulativeEarnings.toFixed(2));
+                    flat['Daily Reinforcers'] = day.dailyReinforcers;
+
+                    data.push(flat);
+                });
+            } else {
+                // Fallback for participants with no logs yet (Entry row)
+                const flat = getParticipantSummary(p, {});
+                flat['Day Number'] = 0;
+                flat['Date'] = 'No Logs';
+                flat['Daily Earnings'] = 0;
+                flat['Total Earnings'] = 0;
+                flat['Daily Reinforcers'] = 0;
+                data.push(flat);
+            }
         }
 
         if (data.length === 0) {
@@ -207,13 +248,35 @@ exports.getParticipantExport = async (req, res) => {
         }
 
         // 2. Fetch Metrics
-        const metrics = await metricsService.calculateMetrics(participantId);
+        // 2. Fetch Metrics (Daily)
+        const dailyData = await metricsService.calculateDailyMetrics(participantId);
 
-        // 3. Generate Summary Data (to repeat on every row)
-        const summaryData = getParticipantSummary(participant, metrics);
+        // 3. Generate Rows
+        const data = [];
+        if (dailyData.length > 0) {
+            let cumulativeEarnings = 0;
 
-        // 4. Return Only Summary Data
-        const data = [summaryData];
+            dailyData.forEach(day => {
+                cumulativeEarnings += day.dailyEarnings;
+
+                const flat = getParticipantSummary(participant, day.metrics);
+                flat['Day Number'] = day.dayNumber;
+                flat['Date'] = day.date;
+                flat['Daily Earnings'] = day.dailyEarnings;
+                flat['Total Earnings'] = parseFloat(cumulativeEarnings.toFixed(2));
+                flat['Daily Reinforcers'] = day.dailyReinforcers;
+
+                data.push(flat);
+            });
+        } else {
+            const flat = getParticipantSummary(participant, {});
+            flat['Day Number'] = 0;
+            flat['Date'] = 'No Logs';
+            flat['Daily Earnings'] = 0;
+            flat['Total Earnings'] = 0;
+            flat['Daily Reinforcers'] = 0;
+            data.push(flat);
+        }
 
         const parser = new Parser();
         const csv = parser.parse(data);

@@ -10,6 +10,13 @@ const participantSchema = new mongoose.Schema({
         type: [String],
         default: ["Genuine", "Apparent", "Coercion"]
     },
+    visible_total_earnings: { type: Number, default: 0 },
+    days_completed: { type: Number, default: 0 },
+    last_completed_date: { type: Date, default: null },
+    lastSessionInitDate: { type: Date, default: null }, // Tracks when the daily session was initialized/reset
+    study_complete: { type: Boolean, default: false },
+    steady_days_counter: { type: Number, default: 0 },
+    forced_completion: { type: Boolean, default: false },
     currentStep: {
         type: String, // e.g., "Demographics", "Genuine", "Apparent"
         default: "Consent"
@@ -53,6 +60,26 @@ const participantSchema = new mongoose.Schema({
         // --- Generic Sub-Schema for Reinforcement ---
         // We can't use a shared object definition easily in Mongoose without subdocuments or copy-paste.
         // Expanding explicitly for clarity and queryability.
+
+        // Genuine Phase
+        matching_genuine: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        sorting_genuine: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
+        dragging_genuine: {
+            schedule: { type: [Number], default: [] },
+            scheduleIndex: { type: Number, default: 0 },
+            correctCount: { type: Number, default: 0 },
+            trialsCompleted: { type: Number, default: 0 }
+        },
 
         // Apparent Phase
         matching_apparent: {

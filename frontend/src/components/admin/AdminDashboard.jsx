@@ -424,6 +424,7 @@ export const AdminDashboard = ({ token, onLogout }) => {
                                     <tr>
                                         <th className="p-4 rounded-tl-lg">ID</th>
                                         <th className="p-4">Status</th>
+                                        <th className="p-4">Days Completed</th>
                                         <th className="p-4">Condition Order</th>
                                         <th className="p-4">Completed At</th>
                                         <th className="p-4 rounded-tr-lg text-right">Action</th>
@@ -439,6 +440,11 @@ export const AdminDashboard = ({ token, onLogout }) => {
                                                     {p.status}
                                                 </span>
                                             </td>
+                                            <td className="p-4 text-center">
+                                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-bold text-sm">
+                                                    {p.daysCompleted || 0}
+                                                </span>
+                                            </td>
                                             <td className="p-4 truncate max-w-xs">{p.conditionOrder}</td>
                                             <td className="p-4 text-gray-500">
                                                 {p.completedAt ? new Date(p.completedAt).toLocaleDateString() : '-'}
@@ -452,7 +458,7 @@ export const AdminDashboard = ({ token, onLogout }) => {
                                     ))}
                                     {participants.length === 0 && (
                                         <tr>
-                                            <td colSpan="5" className="p-8 text-center text-gray-400 italic">
+                                            <td colSpan="6" className="p-8 text-center text-gray-400 italic">
                                                 No participants found.
                                             </td>
                                         </tr>

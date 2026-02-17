@@ -61,6 +61,19 @@ export const MiniSurvey = ({ phase, participantId, onComplete }) => {
             };
 
             await api.updateParticipant(participantId, updateData);
+
+            // 2. Log Event for Daily Metrics
+            await api.logTrial({
+                participantId,
+                taskType: 'MiniSurvey',
+                phase: isGenuine ? 'Genuine' : isApparent ? 'Apparent' : 'Coercion',
+                eventType: 'Survey',
+                selectedOption: rating, // Store rating
+                responseTime: 0,
+                trialNumber: 0,
+                correct: true
+            });
+
             onComplete();
         } catch (err) {
             console.error("Failed to submit survey", err);

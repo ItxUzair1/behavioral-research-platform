@@ -8,7 +8,7 @@ const trialLogSchema = new mongoose.Schema({
     },
     taskType: {
         type: String,
-        enum: ["Matching", "Sorting", "Dragging", "matching", "sorting", "dragging"],
+        enum: ["Matching", "Sorting", "Dragging", "matching", "sorting", "dragging", "ChoiceTask", "MiniSurvey"],
         required: true
     },
     phase: {
@@ -44,8 +44,13 @@ const trialLogSchema = new mongoose.Schema({
         default: null
     },
     eventType: {
-        type: String, // "Trial", "OptOut"
+        type: String, // "Trial", "OptOut", "Choice", "Survey", "SwitchTask"
+        enum: ["Trial", "OptOut", "Choice", "Survey", "SwitchTask"],
         default: "Trial"
+    },
+    dayNumber: {
+        type: Number, // Which study day this log belongs to (1, 2, 3, ...)
+        default: 1
     },
     timestamp: {
         type: Date,

@@ -4,7 +4,7 @@ import { Card } from '../../ui/Card';
 import { MiniSurvey } from '../../common/MiniSurvey';
 import { InstructionSlide } from '../../common/InstructionSlide';
 
-export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
+export const ApparentFlow = ({ onNext, participantId, genuineChoices, daysCompleted }) => {
     // 0: Condition Intro "Purple"
     // 1: Instruction "Matching"
     // 2: Matching
@@ -18,7 +18,10 @@ export const ApparentFlow = ({ onNext, participantId, genuineChoices }) => {
     const [trial, setTrial] = useState(1);
 
     const handleStepComplete = () => {
-        if (step < 7) {
+        // If Day 1, skip step 7 (Survey)
+        const maxStep = (!daysCompleted || daysCompleted === 0) ? 6 : 7;
+
+        if (step < maxStep) {
             setStep(s => s + 1);
             setTrial(1);
         } else {

@@ -18,6 +18,19 @@ export const api = {
         return response.json();
     },
 
+    validateParticipant: async (participantId) => {
+        const response = await fetch(`${API_BASE_URL}/participants/validate`, {
+            method: 'POST',
+            headers: HEADERS,
+            body: JSON.stringify({ participantId })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to validate participant');
+        }
+        return response.json();
+    },
+
     getParticipant: async (participantId) => {
         const response = await fetch(`${API_BASE_URL}/participants/${participantId}`, { headers: HEADERS });
         if (!response.ok) throw new Error("Failed to fetch participant");

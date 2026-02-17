@@ -66,8 +66,12 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
         // Apparent or Coercion OR Genuine Execution
         if (lowerCond.includes('apparent')) taskKey += '_apparent';
         else if (lowerCond.includes('coercion')) taskKey += '_coercion';
-        else if (isGenuineExecution && taskKey === 'dragging' && variant === 'pr') {
-            taskKey = 'dragging_genuine_pr';
+        else if (isGenuineExecution) {
+            if (taskKey === 'dragging' && variant === 'pr') {
+                taskKey = 'dragging_genuine_pr';
+            } else {
+                taskKey += '_genuine';
+            }
         }
     }
 
@@ -245,8 +249,12 @@ const startTask = async (participantId, taskType, condition, variant) => {
         const suffix = condition.toLowerCase();
         if (suffix.includes('apparent')) taskKey += '_apparent';
         else if (suffix.includes('coercion')) taskKey += '_coercion';
-        else if (isGenuineExecution && taskKey === 'dragging' && variant === 'pr') {
-            taskKey = 'dragging_genuine_pr';
+        else if (isGenuineExecution) {
+            if (taskKey === 'dragging' && variant === 'pr') {
+                taskKey = 'dragging_genuine_pr';
+            } else {
+                taskKey += '_genuine';
+            }
         }
     }
 
