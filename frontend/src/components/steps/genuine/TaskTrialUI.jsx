@@ -37,7 +37,7 @@ const TASK_CONFIG = {
     },
     dragging: {
         title: "dragging",
-        description: "Drag the square target to the destination to earn rewards.",
+        description: "Drag the target to the destination to earn rewards.",
         theme: {
             bg: 'bg-orange-50',
             border: 'border-orange-200',
@@ -237,7 +237,7 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                             <div className="flex items-center gap-2 mb-1">
                                 <h2 className={`text-xl font-bold ${currentTheme.text}`}>
                                     {type === 'dragging'
-                                        ? (variant === 'pr' ? "Dragging the Circle" : "Dragging the Square")
+                                        ? (variant?.toLowerCase() === 'pr' ? "Dragging the Circle" : "Dragging the Square")
                                         : config.title}
                                 </h2>
                                 {variant === 'Pre-Training' && (
@@ -246,7 +246,11 @@ export const TaskTrialUI = ({ type = 'matching', variant = 'Pre-Training', phase
                                     </span>
                                 )}
                             </div>
-                            <p className={`${currentTheme.text} opacity-80`}>{config.description}</p>
+                            <p className={`${currentTheme.text} opacity-80`}>
+                                {type === 'dragging'
+                                    ? `Drag the ${variant?.toLowerCase() === 'pr' ? 'circle' : 'square'} to the black box to earn points.`
+                                    : config.description}
+                            </p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                             {/* Trial Counter Removed */}

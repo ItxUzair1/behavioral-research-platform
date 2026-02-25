@@ -230,7 +230,10 @@ exports.validateParticipant = async (req, res) => {
             // 2. Reset Step to Start of Day
             participant.currentStep = "Genuine Assent";
 
-            // 3. Mark Session as Initialized Today
+            // 3. Snapshot earnings at day start for daily $5 cap
+            participant.earnings_at_day_start = participant.earnings || 0;
+
+            // 4. Mark Session as Initialized Today
             participant.lastSessionInitDate = serverToday;
 
             await participant.save();

@@ -168,6 +168,10 @@ const participantSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    earnings_at_day_start: {
+        type: Number,
+        default: 0
+    },
     optOutStats: {
         matching_genuine: { latency: Number, count: Number },
         sorting_genuine: { latency: Number, count: Number },

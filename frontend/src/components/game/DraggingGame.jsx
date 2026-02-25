@@ -25,7 +25,7 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
     const showEarnings = !isPreTraining;
 
     // Config based on variant
-    const isPR = variant === 'pr';
+    const isPR = variant?.toLowerCase() === 'pr';
     const shapeClass = isPR ? 'rounded-full' : 'rounded-none'; // Circle vs Square
 
     const initTask = async () => {
@@ -150,6 +150,11 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
         // Temporary success state to lock UI or animate
         setDragSuccess(true);
 
+        // Play success sound immediately for better responsiveness
+        if (isCorrect) {
+            playTrialCompleteSound();
+        }
+
         try {
             const res = await api.submitTaskResult({
                 participantId,
@@ -161,11 +166,6 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
             });
 
             if (res.success) {
-                // Play success sound
-                if (isCorrect) {
-                    playTrialCompleteSound();
-                }
-
                 setInternalTrialCount(res.trialsCompleted);
 
                 // Log with authoritative data
@@ -183,7 +183,8 @@ export const DraggingGame = ({ variant, participantId, phase, onComplete, onTria
                 }
 
                 if (shouldShowReward) {
-                    setRewardData({ amount: res.amount || 0.05 }); // Use API amount or fallback
+                    const amount = res.amount !== undefined ? res.amount : 0.05;
+                    setRewardData({ amount });
                     // If reward, we wait for modal close to reset
                 } else {
                     // No reward, reset immediately

@@ -129,6 +129,15 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
     // But actual MONEY accumulation applies only to Main Tasks (and Genuine Execution)
     const canIsolateMoney = isPreTraining; // If Pre-Training, we DO NOT add money to total
 
+    // Dynamic Daily Cap Logic: Strictly limited to $5 per day.
+    // earnings_at_day_start is snapshot when a new day session initializes in validateParticipant.
+    // This ensures the cap is always relative to what the participant started the day with.
+    const dayStartBalance = Math.round((participant.earnings_at_day_start || 0) * 100) / 100;
+    const currentMaxEarnings = Math.min(dayStartBalance + 5.00, 15.00);
+    const roundedEarnings = Math.round(participant.earnings * 100) / 100;
+
+    console.log(`[RewardService] Cap Check: dayStart=${dayStartBalance}, max=${currentMaxEarnings}, current=${roundedEarnings}, capped=${roundedEarnings >= currentMaxEarnings}`);
+
     if (isCorrect) {
         state.correctCount += 1;
 
@@ -153,14 +162,14 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
                 rewardAmount = nominalAmount;
                 // We return this amount so frontend shows "$0.05", but we don't save it to DB earnings.
             } else {
-                // Main Task: Add to earnings (capped)
-                if (participant.earnings < MAX_EARNINGS) {
+                // Main Task: Add to earnings (capped) using rounded comparison
+                if (roundedEarnings < currentMaxEarnings) {
                     rewardAmount = nominalAmount;
-                    const potentialTotal = participant.earnings + nominalAmount;
+                    const potentialTotal = Math.round((participant.earnings + nominalAmount) * 100) / 100;
 
-                    if (potentialTotal > MAX_EARNINGS) {
-                        rewardAmount = MAX_EARNINGS - participant.earnings;
-                        participant.earnings = MAX_EARNINGS;
+                    if (potentialTotal > currentMaxEarnings) {
+                        rewardAmount = Math.max(0, Math.round((currentMaxEarnings - participant.earnings) * 100) / 100);
+                        participant.earnings = currentMaxEarnings;
                     } else {
                         participant.earnings = potentialTotal;
                     }
@@ -174,10 +183,6 @@ const processTrial = async (participantId, taskType, isCorrect, condition, varia
                     if (phaseSuffix) {
                         const baseTask = taskType.toLowerCase();
                         const breakdownKey = `${baseTask}_${phaseSuffix}`;
-                        const path = `earningsByTask.${breakdownKey}`;
-                        // Mongoose Map get/set or direct object access? 
-                        // Schema says earningsByTask is an Object with keys, not a Map.
-                        // Access via dot notation string? No, simple object access.
                         if (participant.earningsByTask) {
                             participant.earningsByTask[breakdownKey] = (participant.earningsByTask[breakdownKey] || 0) + rewardAmount;
                         }
@@ -294,25 +299,6 @@ const startTask = async (participantId, taskType, condition, variant) => {
 
     trialsCompleted = state.trialsCompleted;
 
-    // For Pre-Training, we ALSO want to track 'pre_training_completion' map because
-    // some frontend logic might rely on specific variant counts if it queries `participant.pre_training_completion`?
-    // Actually, startTask returns `trialsCompleted`. If we change the source of truth for Pre-Training to reinforcementState,
-    // we must ensure the frontend receives the correct number.
-    // The previous code returned `participant.pre_training_completion.get(storageKey)` for Pre-Training.
-    // Use the reinforcementState count as the primary source now for consistency with processTrial.
-
-    // However, if the user switches variants in Pre-Training (e.g., 'pr' to 'vr'), reinforcementState[taskKey] might be shared
-    // depending on our key logic.
-    // Key logic in processTrial:
-    // If Pre-Training, taskKey = taskType.toLowerCase() (e.g. "matching").
-    // So "matching" is shared across variants in reinforcementState.
-    // Pre-Training matching variants: 'equations', 'mammals'.
-    // If we want separated counts per variant, we need variant keys.
-    // The previous `processTrial` logic I wrote used `taskKey` which was just `taskType`.
-    // So it SHARES the schedule across variants in Pre-Training.
-    // User requested: "implement same this logic in all tasks of pre-trainning".
-    // Usually schedules are per task type.
-
     // Save
     participant.markModified('reinforcementState');
     await participant.save();
@@ -327,9 +313,12 @@ const getEarnings = async (participantId) => {
     const participant = await Participant.findOne({ participantId });
     if (!participant) throw new Error('Participant not found');
 
+    const dayStartBalance = Math.round((participant.earnings_at_day_start || 0) * 100) / 100;
+    const currentMaxEarnings = Math.min(dayStartBalance + 5.00, 15.00);
+
     return {
         totalEarnings: participant.earnings,
-        remainingPossible: Math.max(0, MAX_EARNINGS - participant.earnings)
+        remainingPossible: Math.max(0, currentMaxEarnings - participant.earnings)
     };
 };
 

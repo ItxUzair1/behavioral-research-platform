@@ -79,6 +79,11 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
         }
 
         try {
+            // Play success sound immediately for better responsiveness
+            if (isCorrect) {
+                playTrialCompleteSound();
+            }
+
             const res = await api.submitTaskResult({
                 participantId,
                 taskType: 'sorting',
@@ -89,9 +94,6 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
             });
 
             if (res.success) {
-                if (isCorrect) {
-                    playTrialCompleteSound();
-                }
                 setInternalTrialCount(res.trialsCompleted);
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
                     reward: res.reward || isForcedRewardTrial,
@@ -105,7 +107,8 @@ export const SortingGame = ({ variant, participantId, phase, onComplete, onTrial
                 }
 
                 if (shouldShowReward) {
-                    setRewardData({ amount: res.amount || 0.05 });
+                    const amount = res.amount !== undefined ? res.amount : 0.05;
+                    setRewardData({ amount });
                 } else {
                     setTimeout(advanceStimulus, 200); // reduced delay
                 }

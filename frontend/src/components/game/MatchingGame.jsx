@@ -113,6 +113,11 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
 
         const rt = Math.floor(Math.random() * 500 + 500);
 
+        // Play success sound immediately for better responsiveness
+        if (isCorrect) {
+            playTrialCompleteSound();
+        }
+
         try {
             const res = await api.submitTaskResult({
                 participantId,
@@ -124,9 +129,6 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
             });
 
             if (res.success) {
-                if (isCorrect) {
-                    playTrialCompleteSound();
-                }
                 setInternalTrialCount(res.trialsCompleted);
                 onTrialEnd(isCorrect, rt, selectedOptionLabel, {
                     reward: res.reward || isForcedRewardTrial,
@@ -140,7 +142,8 @@ export const MatchingGame = ({ variant, participantId, phase, onComplete, onTria
                 }
 
                 if (shouldShowReward) {
-                    setRewardData({ amount: res.amount || 0.05 });
+                    const amount = res.amount !== undefined ? res.amount : 0.05;
+                    setRewardData({ amount });
                 } else {
                     setTimeout(advanceStimulus, 200); // reduced delay for speed
                 }
